@@ -1,0 +1,83 @@
+c-----------------------------------------------------------
+c This version: polfre_s1.66el:
+c =============================
+c-----------------------------------------------------------
+c
+c WORKING PG for linear/elliptical particle motion.
+c
+c This program computes the degree of polarization (dop)
+c for three component sensors employing sliding data windows
+c as function of frequency.
+c
+c The employed dop strategy has been introduced in 
+c Schimmel & Gallart (2003) using analytic signal theory in 
+c the t-domain. Later, in Schimmel & Gallart (2004), the dop 
+c strategy has been extended to the tf-domain, but 
+c using now a different strategy to compute the polarization 
+c attributes. Main reason for changing the way to determine 
+c polarization attributes has been to get experiences with 
+c other approaches and to show that the dop strategy is 
+c independent on the polarization approach.
+c
+c Thus, this program uses an eigen approach (eigen values and 
+c eigen vectors) to construct the dop following the
+c time-domain definition. A freq-dependent Gaussian window 
+c can be used. This version is up-graded using the S-Transform 
+c which is very similar to my 1st approach. 
+c
+c The polarization approach has been used for filtering 
+c Schimmel and Gallart (2003,2004,2005) and signal characterization
+c Stutzmann et al. (2009), Schimmel et al. (2011), Obrebski et al. (2012),
+c Sergeant et al. (2013), Davy et al. (2015).
+c
+c REFERENCES for methodology and examples:
+c Schimmel M., and J. Gallart, The use of instantaneous 
+c    polarization attributes for seismic signal detection 
+c    and image enhancement , Geophys.J.Int.,, 155, 653-668, 
+c    doi:10.1046/j.1365-246X.2003.02077.x, 2003.
+c Schimmel & Gallart, Degree of polarization filter for
+c    frequency-dependent signal enhancement through noise
+c    suppression, Bull.Seism.Soc.Am., 94, 1016-1035, 
+c    doi: 10.1785/0120030178, 2004.
+c Schimmel & Gallart, The inverse S Transform in filters 
+c    with time-frequency localization , IEEE Transactions on 
+c    Signal Processing, 53 (11), 4417 - 4422, 
+c    doi:10.1109/TSP.2005.857065, 2005.
+c Stutzmann, E., Schimmel, M., Patau, G., Maggi, A., Global 
+c    climate imprint on seismic noise , Geochem. Geophys. Geosyst., 
+c    10, Q11004, doi:10.1029/2009GC002619, 2009
+c Schimmel, M., Stutzmann, E., Ardhuin, F., Gallart, J., 
+c    Polarized Earth's Ambient Microseismic Noise , Geochem. Geophys. 
+c    Geosyst., doi:10.1029/2011GC003661, 2011.
+c Obrebski, M.J., Ardhuin, F., Stutzmann, E., Schimmel, M., 
+c    How moderate sea states can generate loud seismic noise in 
+c    the deep ocean, Geophys. Res. Lett., 39, L11601, 
+c    doi: 10.1029/2012GL051896, 2012.
+c Sergeant A., Stutzmann E., Maggi A., Schimmel M., Ardhuin F., 
+c    Obrebski M., Frequency-dependent noise sources in the North 
+c    Atlantic Ocean, Geochem. Geophys. Geosyst., 14, 
+c    doi:10.1002/2013GC004905, 2013.
+c Davy, C., Stutzmann, E., Barruol, G., Fontaine, FR, Schimmel, M., 
+c    Sources of secondary microseisms in the Indian Ocean, 
+c    Geophys. J. Int., 202, 1180-1189, doi: 10.1093/gji/ggv221, 2015.
+c
+c (PDFs can be downloaded from my home-page.)
+c---------------------------------------------------------------
+c This a WORKING (RESEARCH) VERSION rather than a final program.
+c I constantly adapt it.
+c Simplifications are required for the straight final code.
+c The program contains options which are not useful any more
+c or which were coded for a very specific purpose. These will be
+c removed in a future version of this program.
+c This research program is not for distribution.
+c Copyright & Author: Martin Schimmel (schimmel@ictja.csic.es)
+c
+c HOW to start:
+c 1. compile together with sac-library.
+c 2. just execute polfre_s1.66el without any argument to
+c    obtain the list of parameters and their usage.
+c 3. see my example and play with the scripts.
+c
+c BUGS & COMMENTS: Please, report remaining bugs! Also, do
+c not hesitate to send me your comments on interesting,
+c modifications or results.
