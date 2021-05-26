@@ -164,7 +164,6 @@ c Zero arrays:
 cccccccccccccc
       write(*,*)'  ... warming up ... '
       write(*,*)'  '
-      write(*,*)f1,f2
       do ns=1,maxns
          sum_maj(ns)=0.
          sum_pla(ns)=0.
@@ -220,7 +219,6 @@ c
 cccccccccccc
 c READ DATA:
 cccccccccccc
-      write(*,*)f1,f2
       if (lsac) then
         call sac_read(name1,trace1,1,nsampa,dt1,bega)
         call getnhv('nzhour',nhour1,nerr)
@@ -345,14 +343,11 @@ c-------------------------------
         if (nsmp.gt.nstf) stop 'change dims of ctf'
         fnyq=0.5/dt
         if (f2.gt.fnyq) f2=fnyq 
-        write(*,*)f1,f2
         df=1./(float(nsmp)*dt)
         f1=nint(f1/df)*df
         dfstep=df
         f2=nint(f2/df)*dfstep
-        write(*,*)f1,f2,dfstep
         if (.not.lflog) then
-          write(*,*)"Entro"
           dfstep=(f2-f1)/float(nfreq-1)
           if (dfstep.lt.df) dfstep=df
           ndfstep=nint(dfstep/df)

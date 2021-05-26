@@ -1024,7 +1024,7 @@ class Polarization:
             self.E=read("../"+str(data_root)+str(station)+".E.sac")
             self.N=read("../"+str(data_root)+str(station)+".N.sac")
 
-    def preprocessing(self,dec=0,remove_fp=0):
+    def preprocessing(self,dec=1,remove_fp=0):
         if self.Z != None or self.N != None or self.E != None:
             self.Z.decimate(int(dec))
             self.E.decimate(int(dec))
@@ -1057,7 +1057,7 @@ class Polarization:
         if pshow:
             plt.show()
     
-    def plot_tBazDop(self,x,y,z,dop,ranges=[[None,None],[None,None]],s=2,log=True,set_limits=[[None,None],[0,None]],xlabel='Time [s]',ylabel='Freq [Hz]',zlabel='BAZ [DEG]',pshow = True,colormap1='hsv',colormap2='gist_stern_r'):
+    def plot_tBazDop(self,x,y,z,dop,ranges=[[None,None],[None,None]],s=2,log=True,set_limits=[[None,None],[0,None]],xlabel='Time [s]',ylabel='Freq [Hz]',zlabel='BAZ [DEG]',pshow = True,colormap1='hsv',colormap2='gist_stern_r',seismogram=None):
         """
             x-> pandas.Series: x.axis; Time
             y-> pandas.Series: y.axis; Frequency
@@ -1082,11 +1082,11 @@ class Polarization:
         sc = ax[1].scatter(x,y, c=z,s=s, vmin=ranges[0][0], vmax=ranges[0][1], cmap=cm,zorder=100)
         sc2 = ax[2].scatter(x,y, c=dop,s=s, vmin=ranges[1][0], vmax=ranges[1][1], cmap=cm2,zorder=100)
         cbarticks=np.arange(ranges[0][0],ranges[0][1]+1,(ranges[0][1]-ranges[0][0])/3)
-        cbarticks=np.arange(ranges[1][0],ranges[1][1]+1,(ranges[1][1]-ranges[1][0])/3)
+        cbarticks2=np.arange(ranges[1][0],ranges[1][1]+1,(ranges[1][1]-ranges[1][0])/3)
         cbaxes = fig.add_axes([0.12, 0.05, 0.25, 0.02])
         cbaxes2 = fig.add_axes([0.62, 0.05, 0.25, 0.02])  
         cbar=plt.colorbar(sc,cax = cbaxes,ticks=cbarticks,orientation='horizontal',pad=-0.01,shrink=0.3)
-        cbar2=plt.colorbar(sc2,cax = cbaxes2,ticks=[0.6,0.7,0.8,0.9,1.0],orientation='horizontal',shrink=0.3)
+        cbar2=plt.colorbar(sc2,cax = cbaxes2,ticks=cbarticks2,orientation='horizontal',shrink=0.3)
         cbar.set_label(zlabel)
         cbar.ax.tick_params(labelsize=8)
         cbar2.set_label('DOP')
@@ -1102,7 +1102,16 @@ class Polarization:
         ax[2].set_xlabel(xlabel)
         ax[1].set_ylabel(ylabel)
         ax[2].set_ylabel(ylabel)
-        time=np.arange(0,len(self.Z[0].data)/self.Z[0].stats.sampling_rate,1/self.Z[0].stats.sampling_rate)
-        ax[0].plot(time,self.Z[0].data,lw=0.3,color='black')
+        if seismogram == None:
+            seismogram = self.Z[0]
+        time=np.arange(0,len(seismogram.data)/seismogram.stats.sampling_rate,1/seismogram.stats.sampling_rate)
+        ax[0].plot(time,seismogram.data,lw=0.4,color='black')
+        ax[0].legend([seismogram.stats.station])
         if pshow:
             plt.show()
+    
+    def filter_data(self,column,min=None,max=None):
+        if min != None:
+            self.Pol = self.Pol[self.Pol[column] > min]
+        if max != None:
+            self.Pol = self.Pol[self.Pol[column] < max]
