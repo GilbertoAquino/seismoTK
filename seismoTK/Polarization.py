@@ -67,7 +67,7 @@ class Polarization:
         else:
             raise ValueError('No data in components')
     
-    def plot_tz(self,x,y,z,ranges=[None,None],dz=20,s=50,log=True,set_limits=[[None,None],[0,None]],xlabel='Time [s]',ylabel='Freq [Hz]',zlabel='BAZ [DEG]',pshow = True,colormap='hsv'):
+    def plot_tz(self,x,y,z,ranges=[None,None],dz=20,s=50,log=True,set_limits=[[None,None],[0,None]],xlabel='Time [s]',ylabel='Freq [Hz]',zlabel='BAZ [DEG]',pshow = True,colormap='hsv',seismogram=None):
         import matplotlib.pyplot as plt
         import numpy as np
         if None in ranges:
@@ -77,6 +77,8 @@ class Polarization:
             set_limits[0][0] = y.min()
             set_limits[0][1] = y.max()
             set_limits[1][1] = x.max()
+        if seismogram == None:
+            seismogram = self.Z[0]
         fig, ax = plt.subplots(2,1,sharex=True,figsize=(9,16),gridspec_kw={'height_ratios': [1, 4]})
         cm = plt.cm.get_cmap(colormap)
         sc = ax[1].scatter(x,y, c=z,s=s, vmin=ranges[0], vmax=ranges[1], cmap=cm,zorder=100)
@@ -92,7 +94,11 @@ class Polarization:
         plt.xlabel(xlabel)
         ax[1].set_ylabel(ylabel)
         time=np.arange(0,len(self.Z[0].data)/self.Z[0].stats.sampling_rate,1/self.Z[0].stats.sampling_rate)
-        ax[0].plot(time,self.Z[0].data)
+        ax[0].plot(time,seismogram.data,lw=0.4,color='black')
+        try:
+            ax[0].legend([seismogram.stats.station])
+        except:
+            pass
         if pshow:
             plt.show()
     
@@ -154,3 +160,54 @@ class Polarization:
             self.Pol = self.Pol[self.Pol[column] > min]
         if max != None:
             self.Pol = self.Pol[self.Pol[column] < max]
+    
+    def freq_baz(self,xmin=-180,xmax=180,ymin=None,ymax=None,xn=50,yn=20):
+        import numpy as np
+        import matplotlib.pyplot as plt
+        x = self.Pol['BAZ'].to_numpy()
+        y = self.Pol['FREQ'].to_numpy()
+        h = np.zeros([yn,xn])
+        n=0
+        xy=np.zeros([yn*xn,3])
+        x_axis = np.zeros(xn)
+        y_axis = np. zeros(yn)
+        if ymin == None:
+            ymin = y.min()
+        if ymax == None:
+            ymax = y.max()
+        if len(x) == len(y):
+            for i in range(0,len(x)):
+                if x[i] >= xmin and x[i] <= xmax and y[i] >= ymin and y[i] <= ymax:
+                    xi = int(xn * (x[i] - xmin) / (xmax - xmin))
+                    if xi >= xn: 
+                        xi = xn -1
+                    yi = int(yn * (y[i] - ymin) / (ymax - ymin))
+                    if yi >= yn: 
+                        yi = yn -1
+                    h[yi,xi]=h[yi,xi] + 1
+                    n=n+1
+            xscale = (xmax -xmin) / xn
+            yscale = (ymax -ymin) / yn
+            if n > 0:
+                percent = 100.0 / n
+            else:
+                percent = 0.0
+            k=0
+            for j in range(0,yn):
+                for i in range(0,xn):
+                    xy[k][0] = np.round(xmin+xscale * (i + 0.5),8)
+                    xy[k][1] = np.round(ymin+yscale * (j + 0.5),8)
+                    h[j,i] = percent * h[j,i]
+                    xy[k][2] = percent * h[j,i]
+                    k=k+1
+            for i in range(0,xn):
+                x_axis[i] = np.round(xmin+xscale * (i + 0.5),8)
+            for j in range(0,yn):
+                y_axis[j] = np.round(ymin+yscale * (j + 0.5),8)
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            plt.contourf(x_axis,y_axis,h)
+            #plt.imshow(zs,extent=(xz.min(),xz.max(),yz.min(),yz.max()),aspect='auto')
+            plt.show()
+        else:
+            raise ValueError('REALLY? HOW THIS IS POSSIBLE? x and y length missmatch')
