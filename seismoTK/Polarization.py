@@ -1,49 +1,53 @@
 class Polarization:
-    def __init__(self):
+    def __init__(self,f1=0.1,f2=1,nfr = 100,nsp = 8192,cycle = 3,wlenf=25,dopm=0.6,max_npts=8192):
         from pathlib import Path
         BASE_DIR = Path(__file__).resolve().parent
-        self.__rootfort=(str(BASE_DIR)+'/Pol/prog/')
+        self._rootfort=(str(BASE_DIR)+'/Pol/prog/')
         self.libsac="/usr/local/sac/lib/libsacio.a"
         self.fort = "gfortran"
+        self.flags = "-fno-pie -no-pie"
         self.Z=None
         self.E=None
         self.N=None
         self.pow=3
-        self.wlenf=20
-        self.dopm=0.6
-        self.cycle=3
-        self.f1=None
-        self.f2=None
+        self.wlenf=wlenf
+        self.dopm=dopm
+        self.cycle=cycle
+        self.f1=f1
+        self.f2=f2
         self.nflen=3
-        self.nfr=None
-        self.nsp=None
+        self.nfr=nfr
+        self.nsp=nsp
         self.ave="ave"
         self.remove_npts=0
-        self.max_npts=8192
+        self.max_npts=max_npts
     
-    def __version__(self):
+    def version(self):
         import os
-        os.system("cat "+self.__rootfort+"version.txt")
+        os.system("cat "+self._rootfort+"version.txt")
         print()
 
-    def __compile__(self):
+    def compile(self):
         import os
-        os.system(self.fort+" -fno-pie -no-pie "+self.__rootfort+"polfre_s1.66el.f -o "+self.__rootfort+"/polfre_s1.66el "+self.libsac)
+        os.system(self.fort+" "+self.flags+" "+self._rootfort+"polfre_s1.66el.f -o "+self._rootfort+"/polfre_s1.66el "+self.libsac)
     
     def get_pol(self):
         import os
         import pandas as pd
-        self.Z.write("V.sac")
-        self.E.write("E.sac")
-        self.N.write("N.sac")
-        par1=" wlenf="+str(self.wlenf)+" pow="+str(self.pow)+" "+self.ave+" dopm="+str(self.dopm)+" nsp="+str(self.nsp)+" "
-        par2=" f1="+str(self.f1)+" f2="+str(self.f2)+" nflen="+str(self.nflen)+" cycle="+str(self.cycle)+" nfr="+str(self.nfr)+""
-        os.system(self.__rootfort+"polfre_s1.66el V.sac N.sac E.sac "+par1+par2+" flog")
-        os.system("awk 'NR>1{print $1,$2,$3,$4,$5}' azi_dopm.asc > temp.asc")
-        self.Pol=pd.read_table("temp.asc",sep=" ",header=None)
-        self.Pol=self.Pol.rename(columns={0:"BAZ",1:"FREQ",2:"DOP",3:"TIME",4:"LIN"})
-        os.system("rm V.sac N.sac E.sac azi_dopm.asc temp.asc")
-
+        try:
+            self.Z.write("V.sac")
+            self.E.write("E.sac")
+            self.N.write("N.sac")
+            par1=" wlenf="+str(self.wlenf)+" pow="+str(self.pow)+" "+self.ave+" dopm="+str(self.dopm)+" nsp="+str(self.nsp)+" "
+            par2=" f1="+str(self.f1)+" f2="+str(self.f2)+" nflen="+str(self.nflen)+" cycle="+str(self.cycle)+" nfr="+str(self.nfr)+""
+            os.system(self._rootfort+"polfre_s1.66el V.sac N.sac E.sac "+par1+par2+" flog")
+            os.system("awk 'NR>1{print $1,$2,$3,$4,$5}' azi_dopm.asc > temp.asc")
+            self.Pol=pd.read_table("temp.asc",sep=" ",header=None)
+            self.Pol=self.Pol.rename(columns={0:"BAZ",1:"FREQ",2:"DOP",3:"TIME",4:"LIN"})
+            os.system("rm V.sac N.sac E.sac azi_dopm.asc temp.asc")
+        except:
+            os.system("rm V.sac N.sac E.sac azi_dopm.asc temp.asc")
+            raise ValueError('get_pol failed')
     def read_station(self,data_root,station):
         from obspy import read
         try:
@@ -57,7 +61,7 @@ class Polarization:
             self.N=read("../"+str(data_root)+str(station)+".N.sac")
 
     def preprocessing(self,dec=1,remove_fp=0):
-        if self.Z != None or self.N != None or self.E != None:
+        if self.Z != None and self.N != None and self.E != None:
             self.Z.decimate(int(dec))
             self.E.decimate(int(dec))
             self.N.decimate(int(dec))
@@ -161,7 +165,7 @@ class Polarization:
         if max != None:
             self.Pol = self.Pol[self.Pol[column] < max]
     
-    def freq_baz(self,xmin=-180,xmax=180,ymin=None,ymax=None,xn=50,yn=20):
+    def freq_baz(self,xmin=-180,xmax=180,ymin=None,ymax=None,xn=50,yn=20,xlabel='BAZ[deg]',ylabel='FREQ[Hz]'):
         import numpy as np
         import matplotlib.pyplot as plt
         x = self.Pol['BAZ'].to_numpy()
@@ -207,7 +211,61 @@ class Polarization:
             fig = plt.figure()
             ax = fig.add_subplot(111)
             plt.contourf(x_axis,y_axis,h)
-            #plt.imshow(zs,extent=(xz.min(),xz.max(),yz.min(),yz.max()),aspect='auto')
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel(ylabel)
             plt.show()
         else:
             raise ValueError('REALLY? HOW THIS IS POSSIBLE? x and y length missmatch')
+
+    def xyz2grd(self,x,y,z,xmin=None,xmax=None,ymin=None,ymax=None,zmin=None,zmax=None,xn=100,yn=20):
+        import numpy as np
+        if xmin == None:
+            xmin = x.min()
+        if ymin == None:
+            ymin = y.min()
+        if zmin == None:
+            zmin = z.min()
+        if xmax == None:
+            xmax = x.max()
+        if ymax == None:
+            ymax = y.max()
+        if zmax == None:
+            zmax = z.max()
+        h = np.zeros([yn,xn])
+        x_axis = np.zeros(xn)
+        y_axis = np. zeros(yn)
+        if len(x) == len(y):
+            for i in range(0,len(x)):
+                if x[i] >= xmin and x[i] <= xmax and y[i] >= ymin and y[i] <= ymax:
+                    xi = int(xn * (x[i] - xmin) / (xmax - xmin))
+                    if xi >= xn: 
+                        xi = xn -1
+                    yi = int(yn * (y[i] - ymin) / (ymax - ymin))
+                    if yi >= yn: 
+                        yi = yn -1
+                    h[yi,xi]=h[yi,xi] + z[i]
+                    if h[yi,xi] > zmax:
+                        h[yi,xi] = zmax
+            xscale = (xmax -xmin) / xn
+            yscale = (ymax -ymin) / yn
+            for i in range(0,xn):
+                x_axis[i] = np.round(xmin+xscale * (i + 0.5),8)
+            for j in range(0,yn):
+                y_axis[j] = np.round(ymin+yscale * (j + 0.5),8)
+        return x_axis,y_axis,h
+
+    def save_pol(self,name):
+        self.Pol.to_csv(name)
+
+def read_pol(name,S_Filter=False):
+    import pandas as pd
+    if S_Filter:
+        from . import S_Filter
+        a = S_Filter()
+        a.Pol = pd.read_csv(name)
+        return a
+    print('HOLA')
+    from . import Polarization
+    a = Polarization()
+    a.Pol = pd.read_csv(name)
+    return a
