@@ -196,6 +196,7 @@ class RACM:
             #    aa.pop(0)
             #    aa = aa[0:37200]
             lengthoffile=len(aa)
+            print(lengthoffile)
             #if Clave[i] == 'CUP5':
             #       lengthoffile = 30099-109
             for jj in range(0,lengthoffile):
@@ -205,7 +206,7 @@ class RACM:
                 ii=0
                 for x1 in range(0,len(example_list)):
                     if example_list[x1]=='':
-                        uselesse=1
+                        pass
                     else:
                         try:
                             comp[ii]=example_list[x1]
@@ -262,7 +263,10 @@ class RACM:
         if Orientacion in ['Vert','East','North']:
             st.write('../'+str(rootsave)+str(CLAVE)+'.'+str(Orientacion[0])+'.sac')
         else:
-            orint=Orientacion[0]+Orientacion[3]
+            try:
+                orint=Orientacion[0]+Orientacion[3]
+            except:
+                orint=Orientacion
             print(orint)
             if orint.lower() in ['sw','ne']:
                 print('Orientacion: '+Orientacion+' Guardado como N')
@@ -270,6 +274,8 @@ class RACM:
             elif orint.lower() in ['se','nw']:
             	print('Orientacion: '+Orientacion+' Guardado como E')
             	st.write('../'+str(rootsave)+str(CLAVE)+'.E.sac')
+            elif orint == Orientacion:
+                st.write('../'+str(rootsave)+str(CLAVE)+'.'+Orientacion+'.sac')
 
     def AsignacionDeOrientacion(self,O,DatosO):
         dum=1
@@ -406,7 +412,6 @@ class RACM:
         import matplotlib.pyplot as plt
         import numpy as np
         import os
-        import sys
         from obspy import read
         import statistics as stcs
         name=self.name
@@ -417,9 +422,18 @@ class RACM:
         V=read('*.V.sac')
         E=read('*.E.sac')
         N=read('*.N.sac')
+        try:
+            R=read('*.R.sac')
+            T=read('*.T.sac')
+            Componentes_Rotadas = True
+        except:
+            Componentes_Rotadas = False
         V.detrend(type="linear")
         E.detrend(type="linear")
         N.detrend(type="linear")
+        if Componentes_Rotadas:
+            R.detrend(type="linear")
+            T.detrend(type="linear")
         VF=V.copy()
         VF.filter("bandpass",corners=4, freqmin=0.0833, freqmax=0.125, zerophase=True)
         clave=[]
@@ -471,32 +485,64 @@ class RACM:
         maxargument=np.argmax(cor)
 
         print('Minima distancia: ',mindist,'Estación: ',clave[mindistindex])
-        for i in range(0,len(VF)):
-            #a=np.correlate(VF[i].data[data2correlatemenos:data2correlatemas],VF[mindistindex].data[pulsemenos:pulsemas],mode='full')
-            a=np.correlate(VF[i].data[d2menos:data2correlatemas[i]],VF[mindistindex].data[pulsemenos:pulsemas],mode='full')
-            if np.abs(max(a)) < np.abs(min(a)):
-                #print("Estacion: ",clave[i]," Componente vertical invertida. Corrigiendo...")
-                VF[i].data= VF[i].data*-1
-                V[i].data = V[i].data*-1
-                a=a*-1
-            a=a/max(a)
-            mindex1=np.argmax(a)
-            print(clave[i],mindex1,maxargument)
-            while mindex1 < maxargument:
-                a=np.insert(a,0,0)
-                VF[i].data=np.insert(VF[i].data,0,0)
-                V[i].data=np.insert(V[i].data,0,0)
-                E[i].data=np.insert(E[i].data,0,0)
-                N[i].data=np.insert(N[i].data,0,0)
+        if Componentes_Rotadas:
+            for i in range(0,len(VF)):
+                #a=np.correlate(VF[i].data[data2correlatemenos:data2correlatemas],VF[mindistindex].data[pulsemenos:pulsemas],mode='full')
+                a=np.correlate(VF[i].data[d2menos:data2correlatemas[i]],VF[mindistindex].data[pulsemenos:pulsemas],mode='full')
+                if np.abs(max(a)) < np.abs(min(a)):
+                    #print("Estacion: ",clave[i]," Componente vertical invertida. Corrigiendo...")
+                    VF[i].data= VF[i].data*-1
+                    V[i].data = V[i].data*-1
+                    a=a*-1
+                a=a/max(a)
                 mindex1=np.argmax(a)
+                print(clave[i],mindex1,maxargument)
+                while mindex1 < maxargument:
+                    a=np.insert(a,0,0)
+                    VF[i].data=np.insert(VF[i].data,0,0)
+                    V[i].data=np.insert(V[i].data,0,0)
+                    E[i].data=np.insert(E[i].data,0,0)
+                    N[i].data=np.insert(N[i].data,0,0)
+                    T[i].data=np.insert(T[i].data,0,0)
+                    R[i].data=np.insert(R[i].data,0,0)
+                    mindex1=np.argmax(a)
 
-            while mindex1 > maxargument:
-                a=np.delete(a,0)
-                VF[i].data=np.delete(VF[i].data,0)
-                V[i].data=np.delete(V[i].data,0)
-                E[i].data=np.delete(E[i].data,0)
-                N[i].data=np.delete(N[i].data,0)
+                while mindex1 > maxargument:
+                    a=np.delete(a,0)
+                    VF[i].data=np.delete(VF[i].data,0)
+                    V[i].data=np.delete(V[i].data,0)
+                    E[i].data=np.delete(E[i].data,0)
+                    N[i].data=np.delete(N[i].data,0)
+                    R[i].data=np.delete(E[i].data,0)
+                    T[i].data=np.delete(N[i].data,0)
+                    mindex1=np.argmax(a)
+        else:
+            for i in range(0,len(VF)):
+                #a=np.correlate(VF[i].data[data2correlatemenos:data2correlatemas],VF[mindistindex].data[pulsemenos:pulsemas],mode='full')
+                a=np.correlate(VF[i].data[d2menos:data2correlatemas[i]],VF[mindistindex].data[pulsemenos:pulsemas],mode='full')
+                if np.abs(max(a)) < np.abs(min(a)):
+                    #print("Estacion: ",clave[i]," Componente vertical invertida. Corrigiendo...")
+                    VF[i].data= VF[i].data*-1
+                    V[i].data = V[i].data*-1
+                    a=a*-1
+                a=a/max(a)
                 mindex1=np.argmax(a)
+                print(clave[i],mindex1,maxargument)
+                while mindex1 < maxargument:
+                    a=np.insert(a,0,0)
+                    VF[i].data=np.insert(VF[i].data,0,0)
+                    V[i].data=np.insert(V[i].data,0,0)
+                    E[i].data=np.insert(E[i].data,0,0)
+                    N[i].data=np.insert(N[i].data,0,0)
+                    mindex1=np.argmax(a)
+
+                while mindex1 > maxargument:
+                    a=np.delete(a,0)
+                    VF[i].data=np.delete(VF[i].data,0)
+                    V[i].data=np.delete(V[i].data,0)
+                    E[i].data=np.delete(E[i].data,0)
+                    N[i].data=np.delete(N[i].data,0)
+                    mindex1=np.argmax(a)
 
         rmenos = pulse[0] #int(input("-->Limite inferior de la fase a alinear: "))
         rmas = pulse[1] #input("-->Limite superior de la fase a alinear: "))
@@ -505,27 +551,56 @@ class RACM:
         rmas = maximo + pulse[0] + 100
         maximo=np.argmax(VF[mindistindex].data[rmenos:rmas])
         print('Alineacion de maximos')
-        for i in range(0,len(V)):
-            maximoi = np.argmax(VF[i].data[rmenos:rmas])
-            print(clave[i],maximoi,maximo)
-            if maximoi == 0:
-                maximoi = maximo
-            while maximoi < maximo:
-                VF[i].data=np.insert(VF[i].data,0,0)
-                V[i].data=np.insert(V[i].data,0,0)
-                E[i].data=np.insert(E[i].data,0,0)
-                N[i].data=np.insert(N[i].data,0,0)
+        if Componentes_Rotadas:
+            for i in range(0,len(V)):
                 maximoi = np.argmax(VF[i].data[rmenos:rmas])
-            while maximoi > maximo:
-                VF[i].data=np.delete(VF[i].data,0)
-                V[i].data=np.delete(V[i].data,0)
-                E[i].data=np.delete(E[i].data,0)
-                N[i].data=np.delete(N[i].data,0)
+                print(clave[i],maximoi,maximo)
+                if maximoi == 0:
+                    maximoi = maximo
+                while maximoi < maximo:
+                    VF[i].data=np.insert(VF[i].data,0,0)
+                    V[i].data=np.insert(V[i].data,0,0)
+                    E[i].data=np.insert(E[i].data,0,0)
+                    N[i].data=np.insert(N[i].data,0,0)
+                    T[i].data=np.insert(T[i].data,0,0)
+                    R[i].data=np.insert(R[i].data,0,0)
+                    maximoi = np.argmax(VF[i].data[rmenos:rmas])
+                while maximoi > maximo:
+                    VF[i].data=np.delete(VF[i].data,0)
+                    V[i].data=np.delete(V[i].data,0)
+                    E[i].data=np.delete(E[i].data,0)
+                    N[i].data=np.delete(N[i].data,0)
+                    T[i].data=np.delete(T[i].data,0)
+                    R[i].data=np.delete(R[i].data,0)
+                    maximoi = np.argmax(VF[i].data[rmenos:rmas])
+            for i in range(0,len(V)):
+                V[i].write(str(clave[i])+'.'+'V.sac')
+                E[i].write(str(clave[i])+'.'+'E.sac')
+                N[i].write(str(clave[i])+'.'+'N.sac')
+                T[i].write(str(clave[i])+'.'+'T.sac')
+                R[i].write(str(clave[i])+'.'+'R.sac')
+        else:
+            for i in range(0,len(V)):
                 maximoi = np.argmax(VF[i].data[rmenos:rmas])
-        for i in range(0,len(V)):
-            V[i].write(str(clave[i])+'.'+'V.sac')
-            E[i].write(str(clave[i])+'.'+'E.sac')
-            N[i].write(str(clave[i])+'.'+'N.sac')
+                print(clave[i],maximoi,maximo)
+                if maximoi == 0:
+                    maximoi = maximo
+                while maximoi < maximo:
+                    VF[i].data=np.insert(VF[i].data,0,0)
+                    V[i].data=np.insert(V[i].data,0,0)
+                    E[i].data=np.insert(E[i].data,0,0)
+                    N[i].data=np.insert(N[i].data,0,0)
+                    maximoi = np.argmax(VF[i].data[rmenos:rmas])
+                while maximoi > maximo:
+                    VF[i].data=np.delete(VF[i].data,0)
+                    V[i].data=np.delete(V[i].data,0)
+                    E[i].data=np.delete(E[i].data,0)
+                    N[i].data=np.delete(N[i].data,0)
+                    maximoi = np.argmax(VF[i].data[rmenos:rmas])
+            for i in range(0,len(V)):
+                V[i].write(str(clave[i])+'.'+'V.sac')
+                E[i].write(str(clave[i])+'.'+'E.sac')
+                N[i].write(str(clave[i])+'.'+'N.sac')
         os.chdir('../')
 
     def plottraces(self,traces,bT,eT,Postraces=[0]):
@@ -613,9 +688,18 @@ class RACM:
         V=read('*.V.sac')
         E=read('*.E.sac')
         N=read('*.N.sac')
+        try:
+            R=read('*.R.sac')
+            T=read('*.T.sac')
+            Componentes_Rotadas = True
+        except:
+            Componentes_Rotadas = False
         VF=V.copy()
         EF=E.copy()
         NF=N.copy()
+        if Componentes_Rotadas:
+            TF=T.copy()
+            RF=R.copy()
         clave=[]
         dist=[]
         velfreq=[]
@@ -624,50 +708,107 @@ class RACM:
         velfreqOrden=[]
         l=len(V)
         #print(l)
-        for i in range(0,len(V)):
-            clave.append(V[i].stats.station)
-            dist.append(V[i].stats.sac.dist)
-            velfreq.append(V[i].stats.sampling_rate)
-            a1=VF.select(station=str(clave[i]))
-            a2=EF.select(station=str(clave[i]))
-            a3=NF.select(station=str(clave[i]))
-            VF.remove(a1[0])
-            EF.remove(a2[0])
-            NF.remove(a3[0])
+        if Componentes_Rotadas:
+            for i in range(0,len(V)):
+                clave.append(V[i].stats.station)
+                dist.append(V[i].stats.sac.dist)
+                velfreq.append(V[i].stats.sampling_rate)
+                a1=VF.select(station=str(clave[i]))
+                a2=EF.select(station=str(clave[i]))
+                a3=NF.select(station=str(clave[i]))
+                a4=RF.select(station=str(clave[i]))
+                a5=TF.select(station=str(clave[i]))
+                VF.remove(a1[0])
+                EF.remove(a2[0])
+                NF.remove(a3[0])
+                RF.remove(a4[0])
+                TF.remove(a5[0])
+        else:
+            for i in range(0,len(V)):
+                clave.append(V[i].stats.station)
+                dist.append(V[i].stats.sac.dist)
+                velfreq.append(V[i].stats.sampling_rate)
+                a1=VF.select(station=str(clave[i]))
+                a2=EF.select(station=str(clave[i]))
+                a3=NF.select(station=str(clave[i]))
+                VF.remove(a1[0])
+                EF.remove(a2[0])
+                NF.remove(a3[0])
         distmean = statistics.mean(dist)
-        for i in range(0,len(V)):
-            mindist=min(dist)
-            mindistindex=dist.index(min(dist))
-            claveOrden.append(clave[mindistindex])
-            distOrden.append(mindist)
-            velfreqOrden.append(velfreq[mindistindex])
-            clave.pop(mindistindex)
-            dist.pop(mindistindex)
-            velfreq.pop(mindistindex)
-            VF.append(V[mindistindex])
-            EF.append(E[mindistindex])
-            NF.append(N[mindistindex])
-            a1=V.select(station=str(claveOrden[i]))
-            a2=E.select(station=str(claveOrden[i]))
-            a3=N.select(station=str(claveOrden[i]))
-            V.remove(a1[0])
-            E.remove(a2[0])
-            N.remove(a3[0])
-
-        V=VF.copy()
-        E=EF.copy()
-        N=NF.copy()
+        if Componentes_Rotadas:
+            for i in range(0,len(V)):
+                mindist=min(dist)
+                mindistindex=dist.index(min(dist))
+                claveOrden.append(clave[mindistindex])
+                distOrden.append(mindist)
+                velfreqOrden.append(velfreq[mindistindex])
+                clave.pop(mindistindex)
+                dist.pop(mindistindex)
+                velfreq.pop(mindistindex)
+                VF.append(V[mindistindex])
+                EF.append(E[mindistindex])
+                NF.append(N[mindistindex])
+                RF.append(R[mindistindex])
+                TF.append(T[mindistindex])
+                a1=V.select(station=str(claveOrden[i]))
+                a2=E.select(station=str(claveOrden[i]))
+                a3=N.select(station=str(claveOrden[i]))
+                a4=R.select(station=str(claveOrden[i]))
+                a5=T.select(station=str(claveOrden[i]))
+                V.remove(a1[0])
+                E.remove(a2[0])
+                N.remove(a3[0])
+                R.remove(a4[0])
+                T.remove(a5[0])
+            V=VF.copy()
+            E=EF.copy()
+            N=NF.copy()
+            R=RF.copy()
+            T=TF.copy()
+        else:
+            for i in range(0,len(V)):
+                mindist=min(dist)
+                mindistindex=dist.index(min(dist))
+                claveOrden.append(clave[mindistindex])
+                distOrden.append(mindist)
+                velfreqOrden.append(velfreq[mindistindex])
+                clave.pop(mindistindex)
+                dist.pop(mindistindex)
+                velfreq.pop(mindistindex)
+                VF.append(V[mindistindex])
+                EF.append(E[mindistindex])
+                NF.append(N[mindistindex])
+                a1=V.select(station=str(claveOrden[i]))
+                a2=E.select(station=str(claveOrden[i]))
+                a3=N.select(station=str(claveOrden[i]))
+                V.remove(a1[0])
+                E.remove(a2[0])
+                N.remove(a3[0])
+            V=VF.copy()
+            E=EF.copy()
+            N=NF.copy()
 
         vel=3.2
         timemean = distmean/vel
         pp=round(distOrden[0]/vel,2)
-        for i in range(1,l):
-            p=round(distOrden[i]/vel,2)
-            Nmas=int((p-pp)*velfreqOrden[i])
-            for j in range(0,Nmas):
-                V[i].data=np.insert(V[i].data,0,0)
-                E[i].data=np.insert(E[i].data,0,0)
-                N[i].data=np.insert(N[i].data,0,0)
+        if Componentes_Rotadas:
+            for i in range(1,l):
+                p=round(distOrden[i]/vel,2)
+                Nmas=int((p-pp)*velfreqOrden[i])
+                for j in range(0,Nmas):
+                    V[i].data=np.insert(V[i].data,0,0)
+                    E[i].data=np.insert(E[i].data,0,0)
+                    N[i].data=np.insert(N[i].data,0,0)
+                    R[i].data=np.insert(R[i].data,0,0)
+                    T[i].data=np.insert(T[i].data,0,0)
+        else:
+            for i in range(1,l):
+                p=round(distOrden[i]/vel,2)
+                Nmas=int((p-pp)*velfreqOrden[i])
+                for j in range(0,Nmas):
+                    V[i].data=np.insert(V[i].data,0,0)
+                    E[i].data=np.insert(E[i].data,0,0)
+                    N[i].data=np.insert(N[i].data,0,0)
             #print(Nmas)
         Numpts=[]
         for i in range(0,l):
@@ -675,16 +816,32 @@ class RACM:
         Nmax=int(statistics.mean(Numpts))
         print(Nmax)
         #print(Nmax)
-
-        for i in range(0,l):
-            while(len(V[i].data)<Nmax):
-                V[i].data=np.insert(V[i].data,len(V[i].data),0)
-                E[i].data=np.insert(E[i].data,len(E[i].data),0)
-                N[i].data=np.insert(N[i].data,len(N[i].data),0)
-            while (len(V[i].data)>Nmax):
-                V[i].data=np.delete(V[i].data,len(V[i].data)-1)
-                E[i].data=np.delete(E[i].data,len(E[i].data)-1)
-                N[i].data=np.delete(N[i].data,len(N[i].data)-1)
+        if Componentes_Rotadas:
+            for i in range(0,l):
+                while(len(V[i].data)<Nmax):
+                    V[i].data=np.insert(V[i].data,len(V[i].data),0)
+                    E[i].data=np.insert(E[i].data,len(E[i].data),0)
+                    N[i].data=np.insert(N[i].data,len(N[i].data),0)
+                    R[i].data=np.insert(R[i].data,len(R[i].data),0)
+                    T[i].data=np.insert(T[i].data,len(T[i].data),0)
+                while (len(V[i].data)>Nmax):
+                    V[i].data=np.delete(V[i].data,len(V[i].data)-1)
+                    E[i].data=np.delete(E[i].data,len(E[i].data)-1)
+                    N[i].data=np.delete(N[i].data,len(N[i].data)-1)
+                    R[i].data=np.delete(R[i].data,len(R[i].data)-1)
+                    T[i].data=np.delete(T[i].data,len(T[i].data)-1)
+                print(i+1,"Estación: "+str(claveOrden[i])+' Ajustada con: ',len(V[i].data))
+        else:
+            for i in range(0,l):
+                while(len(V[i].data)<Nmax):
+                    V[i].data=np.insert(V[i].data,len(V[i].data),0)
+                    E[i].data=np.insert(E[i].data,len(E[i].data),0)
+                    N[i].data=np.insert(N[i].data,len(N[i].data),0)
+                while (len(V[i].data)>Nmax):
+                    V[i].data=np.delete(V[i].data,len(V[i].data)-1)
+                    E[i].data=np.delete(E[i].data,len(E[i].data)-1)
+                    N[i].data=np.delete(N[i].data,len(N[i].data)-1)
+                print(i+1,"Estación: "+str(claveOrden[i])+' Ajustada con: ',len(V[i].data))
                 
             '''if len(V[i].data)==Nmax:
                 V[i].stats.starttime = V[i].stats.starttime - timemean
@@ -701,12 +858,17 @@ class RACM:
                     V[i].stats.sac.nzsec = V[i].stats.sac.nzsec - timemean
                     E[i].stats.sac.nzsec = E[i].stats.sac.nzsec - timemean
                     N[i].stats.sac.nzsec = N[i].stats.sac.nzsec - timemean'''   
-            print(i+1,"Estación: "+str(claveOrden[i])+' Ajustada con: ',len(V[i].data))
+            
 
         for i in range(0,l):
             V[i].write(str(claveOrden[i])+'.'+'V.sac')
             E[i].write(str(claveOrden[i])+'.'+'E.sac')
             N[i].write(str(claveOrden[i])+'.'+'N.sac')
+            try:
+                R[i].write(str(claveOrden[i])+'.'+'R.sac')
+                T[i].write(str(claveOrden[i])+'.'+'T.sac')
+            except:
+                pass
         os.chdir('../')
 
     def back(self):
@@ -758,6 +920,7 @@ class RACM:
             duration=[]
             print(N)
         if tqdmisinstalled:
+            print("Reduciendo el tiempo de componente: ",)
             for i in tqdm(range(0,len(Traces))):
                 while(len(Traces[i].data)<N):
                     Traces[i].data=np.insert(Traces[i].data,len(Traces[i].data),0)
@@ -815,17 +978,26 @@ class RACM:
         V = read('*V.sac')
         E = read('*E.sac')
         N = read('*N.sac')
+        try:
+            R=read('*.R.sac')
+            T=read('*.T.sac')
+            Componentes_Rotadas = True
+        except:
+            Componentes_Rotadas = False
         clave = []
         for i in V:
             clave.append(i.stats.station)
         self.ReduceTime(V,N=self.nlength)
         self.ReduceTime(N,N=self.nlength)
         self.ReduceTime(E,N=self.nlength)
+        if Componentes_Rotadas:
+            self.ReduceTime(R,N=self.nlength)
+            self.ReduceTime(T,N=self.nlength)
         VF=V.copy()
         VF.filter("bandpass",corners=4, freqmin=0.0833, freqmax=0.125, zerophase=True)
         X = self.spectrograms_pulses(VF)
         X = np.array(X)
-        model = keras.models.load_model(BASE_DIR+'/ANN_Model_pulses2.tf')
+        model = keras.models.load_model(BASE_DIR / 'ANN_Model_pulses2.tf')
         y_pred = model.predict(X)
         yb = []
         ye = []
@@ -845,6 +1017,9 @@ class RACM:
             V[i].write(clave[i]+'.V.sac')
             E[i].write(clave[i]+'.E.sac')
             N[i].write(clave[i]+'.N.sac')
+            if Componentes_Rotadas:
+                R[i].write(clave[i]+'.R.sac')
+                T[i].write(clave[i]+'.T.sac')
         os.chdir('../')
 
     def get_fecha(self):

@@ -249,7 +249,7 @@ class Polarization:
             xscale = (xmax -xmin) / xn
             yscale = (ymax -ymin) / yn
             for i in range(0,xn):
-                x_axis[i] = np.round(xmin+xscale * (i + 0.5),8)
+                x_axis[i] = np.round(xmin+xscale * (i + 0.5),2)
             for j in range(0,yn):
                 y_axis[j] = np.round(ymin+yscale * (j + 0.5),8)
         return x_axis,y_axis,h
