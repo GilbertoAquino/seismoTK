@@ -1,3 +1,4 @@
+from numpy import RAISE
 from .helpers.ASA2SAC_helpers import *
 
 class RACM:
@@ -5,7 +6,15 @@ class RACM:
         self.name=name
         self.root=root
         self.date=EarthquakeDate
-        self.nlength = 45000
+        self.__nlength = 45000
+        try:
+            self.read()
+        except:
+            self.V = None
+            self.E = None
+            self.N = None
+            self.T = None
+            self.R = None
     
     def read(self):
         import os
@@ -15,11 +24,18 @@ class RACM:
         self.V=read('*.V.*')
         self.E=read('*.E.*')
         self.N=read('*.N.*')
+        try:
+            self.T = read('*.T.*')
+            self.R = read('*.R.*')
+        except:
+            pass
 
     def ASA2SAC(self):
         import csv
         import numpy as np
         import os
+        if (self.V != None and self.N != None and self.E != None):
+            raise ValueError("Stream objects are not NULL (None)")
         name=self.name
         root=self.root
         rootsave='./'+str(name)+'/'
@@ -239,9 +255,9 @@ class RACM:
             O1=Orientacion[i][0]
             O2=Orientacion[i][1]
             O3=Orientacion[i][2]
-            O1,comp1=self.AsignacionDeOrientacion(O1,comp1)
-            O2,comp2=self.AsignacionDeOrientacion(O2,comp2)
-            O3,comp3=self.AsignacionDeOrientacion(O3,comp3)
+            O1,comp1=AsignacionDeOrientacion(O1,comp1)
+            O2,comp2=AsignacionDeOrientacion(O2,comp2)
+            O3,comp3=AsignacionDeOrientacion(O3,comp3)
             print(i+1,"Orientación de las componentes: ",O1,O2,O3)
             ASATOSAC(comp1,O1,Clave[i],Intervalo[i],Latitud[i],-Longitud[i],latsis,-lonsis,horasis,minsis,segsis,FECHA,rootsave)
             ASATOSAC(comp2,O2,Clave[i],Intervalo[i],Latitud[i],-Longitud[i],latsis,-lonsis,horasis,minsis,segsis,FECHA,rootsave)
@@ -250,59 +266,51 @@ class RACM:
         os.system('rm ../Estacionesleidas.txt ../hpm.txt ../SDI.txt ../N.txt ../No.txt ../La.txt ../Lat.txt ../Lo.txt ../Lon.txt ../In.txt ../Insti.txt ../Ori.txt ../Inter.txt')
         os.system('rm ../Orientacion.txt ../Muestreo.txt')
         os.chdir('../')
+        self.read()
 
     def CheckDelta(self):
         import os
         import statistics
-        from obspy import read
-        name=self.name
-        root=self.root
-        rootsave='./'+str(name)+'/'
-        FECHA=self.date
-        os.chdir(rootsave)
-        V=read('*.V.*')
-        E=read('*.E.*')
-        N=read('*.N.*')
-        V.detrend(type="linear")
-        E.detrend(type="linear")
-        N.detrend(type="linear")
+        rootsave='./'+str(self.name)+'/'
+        self.V.detrend(type="linear")
+        self.E.detrend(type="linear")
+        self.N.detrend(type="linear")
         delta=[]
-        for i in range(0,len(V)):
-            delta.append(V[i].stats.delta)
+        for i in range(0,len(self.V)):
+            delta.append(self.V[i].stats.delta)
         maxdelta=max(delta)
-        mindelta=min(delta)
         mode=statistics.mode(delta)
         print(maxdelta,mode)
         print("..Revisando Intervalos de muestreo..")
-        for i in range(0,len(V)):
+        for i in range(0,len(self.V)):
             deltaisok = False
             while deltaisok == False:
                 if delta[i]<0.01:
-                    print("Estación: "+str(V[i].stats.station)+" Delta: "+str(delta[i]))
-                    V[i].decimate(2,strict_length=False, no_filter=True)
-                    E[i].decimate(2,strict_length=False, no_filter=True)
-                    N[i].decimate(2,strict_length=False, no_filter=True)
-                    print("Nuevo delta: "+str(V[i].stats.delta)+" "+str(E[i].stats.delta)+" "+str(N[i].stats.delta))
-                    delta[i] = V[i].stats.delta
-                    V[i].write(str(V[i].stats.station)+'.'+'V.sac')
-                    E[i].write(str(E[i].stats.station)+'.'+'E.sac')
-                    N[i].write(str(N[i].stats.station)+'.'+'N.sac')
+                    print("Estación: "+str(self.V[i].stats.station)+" Delta: "+str(delta[i]))
+                    self.V[i].decimate(2,strict_length=False, no_filter=True)
+                    self.E[i].decimate(2,strict_length=False, no_filter=True)
+                    self.N[i].decimate(2,strict_length=False, no_filter=True)
+                    print("Nuevo delta: "+str(self.V[i].stats.delta)+" "+str(self.E[i].stats.delta)+" "+str(self.N[i].stats.delta))
+                    delta[i] = self.V[i].stats.delta
+                    self.V[i].write(str(self.V[i].stats.station)+'.'+'V.sac')
+                    self.E[i].write(str(self.E[i].stats.station)+'.'+'E.sac')
+                    self.N[i].write(str(self.N[i].stats.station)+'.'+'N.sac')
                 elif delta[i]>0.01:
-                    print("Estación: "+str(V[i].stats.station)+" Delta: "+str(delta[i]))
-                    V[i].interpolate(sampling_rate=100)
-                    E[i].interpolate(sampling_rate=100)
-                    N[i].interpolate(sampling_rate=100)
-                    print("Nuevo delta: "+str(V[i].stats.delta)+" "+str(E[i].stats.delta)+" "+str(N[i].stats.delta))
-                    delta[i] = V[i].stats.delta
-                    V[i].write(str(V[i].stats.station)+'.'+'V.sac')
-                    E[i].write(str(E[i].stats.station)+'.'+'E.sac')
-                    N[i].write(str(N[i].stats.station)+'.'+'N.sac')
+                    print("Estación: "+str(self.V[i].stats.station)+" Delta: "+str(delta[i]))
+                    self.V[i].interpolate(sampling_rate=100)
+                    self.E[i].interpolate(sampling_rate=100)
+                    self.N[i].interpolate(sampling_rate=100)
+                    print("Nuevo delta: "+str(self.V[i].stats.delta)+" "+str(self.E[i].stats.delta)+" "+str(self.N[i].stats.delta))
+                    delta[i] = self.V[i].stats.delta
+                    self.V[i].write(str(self.V[i].stats.station)+'.'+'V.sac')
+                    self.E[i].write(str(self.E[i].stats.station)+'.'+'E.sac')
+                    self.N[i].write(str(self.N[i].stats.station)+'.'+'N.sac')
                 elif delta[i] == 0.01:
-                    if V[i].stats.delta == E[i].stats.delta and V[i].stats.delta == N[i].stats.delta:
+                    if self.V[i].stats.delta == self.E[i].stats.delta and self.V[i].stats.delta == self.N[i].stats.delta:
                         deltaisok = True
                     else:
                         os.chdir('../')
-                        print(V[i].stats.station,E[i].stats.station,N[i].stats.station)
+                        print(self.V[i].stats.station,self.E[i].stats.station,self.N[i].stats.station)
                         raise ValueError('DELTA VALUES MISMATCH!')
         os.chdir('../')
 
@@ -822,7 +830,7 @@ class RACM:
         import os
         os.chdir('..')
 
-    def Rotar_sac(self):
+    def rotar_sac(self):
         import os
         os.chdir(self.name)
         os.system("ls *.V.sac | awk -F[.] '{print $1}' > stations.txt")
@@ -934,12 +942,12 @@ class RACM:
         clave = []
         for i in V:
             clave.append(i.stats.station)
-        self.ReduceTime(V,N=self.nlength)
-        self.ReduceTime(N,N=self.nlength)
-        self.ReduceTime(E,N=self.nlength)
+        self.ReduceTime(V,N=self.__nlength)
+        self.ReduceTime(N,N=self.__nlength)
+        self.ReduceTime(E,N=self.__nlength)
         if Componentes_Rotadas:
-            self.ReduceTime(R,N=self.nlength)
-            self.ReduceTime(T,N=self.nlength)
+            self.ReduceTime(R,N=self.__nlength)
+            self.ReduceTime(T,N=self.__nlength)
         VF=V.copy()
         VF.filter("bandpass",corners=4, freqmin=0.0833, freqmax=0.125, zerophase=True)
         X = self.spectrograms_pulses(VF)
@@ -952,8 +960,8 @@ class RACM:
         for i in y_pred:
             if i[0] < 0:
             	i[0] = 0
-            yb.append(i[0]*self.nlength)
-            ye.append(i[1]*self.nlength)
+            yb.append(i[0]*self.__nlength)
+            ye.append(i[1]*self.__nlength)
             V[j].stats.sac['a'] = i[0]*450
             V[j].stats.sac['t1'] = i[1]*450
             j=j+1
@@ -991,8 +999,8 @@ class RACM:
                 raise ValueError('Couldnt find T1Marker in sac file: '+i.stats.station)
         for i in range(0,len(yb)):
             if normalized:
-                yb[i]=yb[i]/(self.nlength/100)
-                ye[i]=ye[i]/(self.nlength/100)
+                yb[i]=yb[i]/(self.__nlength/100)
+                ye[i]=ye[i]/(self.__nlength/100)
             dum[i][0] = yb[i]
             dum[i][1] = ye[i]
             y.append(dum[i])

@@ -35,7 +35,7 @@ def ASATOSAC(Datos,Orientacion,CLAVE,Delta,stla,stlo,evla,evlo,hora,min,seg,FECH
         elif orint == Orientacion:
             st.write('../'+str(rootsave)+str(CLAVE)+'.'+Orientacion+'.sac')
 
-def AsignacionDeOrientacion(self,O,DatosO):
+def AsignacionDeOrientacion(O,DatosO):
     dum=1
     if O[0:4]=='N00E' or O[0:4]=='N00W':
         O='North'
