@@ -1,9 +1,20 @@
+from .helpers.ASA2SAC_helpers import *
+
 class RACM:
     def __init__(self,name=None,root=None,EarthquakeDate=None):
         self.name=name
         self.root=root
         self.date=EarthquakeDate
         self.nlength = 45000
+    
+    def read(self):
+        import os
+        from obspy import read
+        rootsave='./'+str(self.name)+'/'
+        os.chdir(rootsave)
+        self.V=read('*.V.*')
+        self.E=read('*.E.*')
+        self.N=read('*.N.*')
 
     def ASA2SAC(self):
         import csv
@@ -232,77 +243,13 @@ class RACM:
             O2,comp2=self.AsignacionDeOrientacion(O2,comp2)
             O3,comp3=self.AsignacionDeOrientacion(O3,comp3)
             print(i+1,"Orientación de las componentes: ",O1,O2,O3)
-            self.ASATOSAC(comp1,O1,Clave[i],Intervalo[i],Latitud[i],-Longitud[i],latsis,-lonsis,horasis,minsis,segsis,FECHA,rootsave)
-            self.ASATOSAC(comp2,O2,Clave[i],Intervalo[i],Latitud[i],-Longitud[i],latsis,-lonsis,horasis,minsis,segsis,FECHA,rootsave)
-            self.ASATOSAC(comp3,O3,Clave[i],Intervalo[i],Latitud[i],-Longitud[i],latsis,-lonsis,horasis,minsis,segsis,FECHA,rootsave)
+            ASATOSAC(comp1,O1,Clave[i],Intervalo[i],Latitud[i],-Longitud[i],latsis,-lonsis,horasis,minsis,segsis,FECHA,rootsave)
+            ASATOSAC(comp2,O2,Clave[i],Intervalo[i],Latitud[i],-Longitud[i],latsis,-lonsis,horasis,minsis,segsis,FECHA,rootsave)
+            ASATOSAC(comp3,O3,Clave[i],Intervalo[i],Latitud[i],-Longitud[i],latsis,-lonsis,horasis,minsis,segsis,FECHA,rootsave)
             os.system("rm ../"+str(a)+".dat")
         os.system('rm ../Estacionesleidas.txt ../hpm.txt ../SDI.txt ../N.txt ../No.txt ../La.txt ../Lat.txt ../Lo.txt ../Lon.txt ../In.txt ../Insti.txt ../Ori.txt ../Inter.txt')
         os.system('rm ../Orientacion.txt ../Muestreo.txt')
         os.chdir('../')
-
-    def ASATOSAC(self,Datos,Orientacion,CLAVE,Delta,stla,stlo,evla,evlo,hora,min,seg,FECHA,rootsave):
-        from obspy import read
-        from obspy.core import UTCDateTime
-        st = read()
-        st.remove(st[2])
-        st.remove(st[1])
-        st[0].data=Datos
-        st[0].stats.station=str(CLAVE)
-        st[0].stats.delta=Delta
-        st[0].stats.channel=str(Orientacion)
-        st[0].stats.network = 'RACM'
-        U=UTCDateTime(str(FECHA)+'T'+str(int(hora))+':'+str(int(min))+':'+str(int(seg)))
-        st[0].stats.starttime=U
-        saq={
-            'stla':stla,
-            'stlo':stlo,
-            'evla':evla,
-            'evlo':evlo,
-            }
-        st[0].stats.sac=saq
-        if Orientacion in ['Vert','East','North']:
-            st.write('../'+str(rootsave)+str(CLAVE)+'.'+str(Orientacion[0])+'.sac')
-        else:
-            try:
-                orint=Orientacion[0]+Orientacion[3]
-            except:
-                orint=Orientacion
-            print(orint)
-            if orint.lower() in ['sw','ne']:
-                print('Orientacion: '+Orientacion+' Guardado como N')
-                st.write('../'+str(rootsave)+str(CLAVE)+'.N.sac')
-            elif orint.lower() in ['se','nw']:
-            	print('Orientacion: '+Orientacion+' Guardado como E')
-            	st.write('../'+str(rootsave)+str(CLAVE)+'.E.sac')
-            elif orint == Orientacion:
-                st.write('../'+str(rootsave)+str(CLAVE)+'.'+Orientacion+'.sac')
-
-    def AsignacionDeOrientacion(self,O,DatosO):
-        dum=1
-        if O[0:4]=='N00E' or O[0:4]=='N00W':
-            O='North'
-            return O,DatosO
-        elif O[0:4]=='S00E' or O[0:4]=='S00W':
-            O='North'
-            DatosO = DatosO*-1.0
-            print(O,"mult*-1")
-            return O,DatosO
-        elif O[0:4]=='N90E' or O[0:4]=='S90E':
-            O='East'
-            return O,DatosO
-        elif O[0:4]=='N90W' or O[0:4]=='S90W' or O[0:4]=='S90O' or O[0:4]=='N90O':
-            O='East'
-            DatosO = DatosO*-1.0
-            print(O,"mult*-1")
-            return O,DatosO
-        elif O=='V' or O=='+V' or O=='+V;V' or O == 'V;+V' or O == '+V;+V' or O == 'V;V':
-            O='Vert'
-            return O,DatosO
-        else:
-            print('No se identifico correctamente esta componente. Se asignó el valor: '+str(O))
-            #O='UNKNOWN'+str(dum)
-            dum=dum+1
-            return O,DatosO
 
     def CheckDelta(self):
         import os
@@ -973,7 +920,7 @@ class RACM:
         import os
         import numpy as np
         from pathlib import Path
-        BASE_DIR = Path(__file__).resolve().parent
+        BASE_DIR = Path(__file__).resolve().parent.parent
         os.chdir(self.name)
         V = read('*V.sac')
         E = read('*E.sac')

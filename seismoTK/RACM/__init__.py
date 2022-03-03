@@ -1,0 +1,1 @@
+from seismoTK.RACM.RACM import RACM
