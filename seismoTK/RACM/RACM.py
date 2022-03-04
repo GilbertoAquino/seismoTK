@@ -29,7 +29,22 @@ class RACM:
             self.T = read('*.T.*')
             self.R = read('*.R.*')
         except:
-            pass
+            self.T = None
+            self.R = None
+        os.chdir("../")
+
+    def write(self,CR=False):
+        import os
+        rootsave='./'+str(self.name)+'/'
+        os.chdir(rootsave)
+        for i in range(0,len(self.V)):
+            self.V[i].write(self.V[i].stats.station+'.V.sac')
+            self.E[i].write(self.V[i].stats.station+'.E.sac')
+            self.N[i].write(self.V[i].stats.station+'.N.sac')
+        if CR:
+            self.R[i].write(self.V[i].stats.station+'.R.sac')
+            self.T[i].write(self.V[i].stats.station+'.T.sac')
+        os.chdir("../")
 
     def ASA2SAC(self):
         import csv
@@ -293,9 +308,7 @@ class RACM:
                     self.N[i].decimate(2,strict_length=False, no_filter=True)
                     print("Nuevo delta: "+str(self.V[i].stats.delta)+" "+str(self.E[i].stats.delta)+" "+str(self.N[i].stats.delta))
                     delta[i] = self.V[i].stats.delta
-                    self.V[i].write(str(self.V[i].stats.station)+'.'+'V.sac')
-                    self.E[i].write(str(self.E[i].stats.station)+'.'+'E.sac')
-                    self.N[i].write(str(self.N[i].stats.station)+'.'+'N.sac')
+                    self.write()
                 elif delta[i]>0.01:
                     print("Estación: "+str(self.V[i].stats.station)+" Delta: "+str(delta[i]))
                     self.V[i].interpolate(sampling_rate=100)
@@ -303,17 +316,13 @@ class RACM:
                     self.N[i].interpolate(sampling_rate=100)
                     print("Nuevo delta: "+str(self.V[i].stats.delta)+" "+str(self.E[i].stats.delta)+" "+str(self.N[i].stats.delta))
                     delta[i] = self.V[i].stats.delta
-                    self.V[i].write(str(self.V[i].stats.station)+'.'+'V.sac')
-                    self.E[i].write(str(self.E[i].stats.station)+'.'+'E.sac')
-                    self.N[i].write(str(self.N[i].stats.station)+'.'+'N.sac')
+                    self.write()
                 elif delta[i] == 0.01:
                     if self.V[i].stats.delta == self.E[i].stats.delta and self.V[i].stats.delta == self.N[i].stats.delta:
                         deltaisok = True
                     else:
-                        os.chdir('../')
                         print(self.V[i].stats.station,self.E[i].stats.station,self.N[i].stats.station)
                         raise ValueError('DELTA VALUES MISMATCH!')
-        os.chdir('../')
 
     def plot_trigger1(self,trace, cft, thr_on, thr_off, df, lin=False, show=True):
         import matplotlib.pyplot as plt
@@ -835,32 +844,25 @@ class RACM:
     def fit_pulses(self,show=False):
         from obspy import read
         from tensorflow import keras
-        import os
         import numpy as np
         from pathlib import Path
         BASE_DIR = Path(__file__).resolve().parent.parent
-        os.chdir(self.name)
-        V = read('*V.sac')
-        E = read('*E.sac')
-        N = read('*N.sac')
-        try:
-            R=read('*.R.sac')
-            T=read('*.T.sac')
-            Componentes_Rotadas = True
-        except:
+        if (self.R == None or self.T == None):
             Componentes_Rotadas = False
+        else:
+            Componentes_Rotadas = True
         clave = []
-        for i in V:
+        for i in self.V:
             clave.append(i.stats.station)
-        self.ReduceTime(V,N=self.__nlength)
-        self.ReduceTime(N,N=self.__nlength)
-        self.ReduceTime(E,N=self.__nlength)
+        ReduceTime(self.V,N=self.__nlength)
+        ReduceTime(self.N,N=self.__nlength)
+        ReduceTime(self.E,N=self.__nlength)
         if Componentes_Rotadas:
-            self.ReduceTime(R,N=self.__nlength)
-            self.ReduceTime(T,N=self.__nlength)
-        VF=V.copy()
+            ReduceTime(self.R,N=self.__nlength)
+            ReduceTime(self.T,N=self.__nlength)
+        VF=self.V.copy()
         VF.filter("bandpass",corners=4, freqmin=0.0833, freqmax=0.125, zerophase=True)
-        X = self.spectrograms_pulses(VF)
+        X = spectrograms_pulses(VF)
         X = np.array(X)
         model = keras.models.load_model(BASE_DIR / 'ANN_Model_pulses2.tf')
         y_pred = model.predict(X)
@@ -872,24 +874,13 @@ class RACM:
             	i[0] = 0
             yb.append(i[0]*self.__nlength)
             ye.append(i[1]*self.__nlength)
-            V[j].stats.sac['a'] = i[0]*450
-            V[j].stats.sac['t1'] = i[1]*450
+            self.V[j].stats.sac['a'] = i[0]*450
+            self.V[j].stats.sac['t1'] = i[1]*450
             j=j+1
-        Pos = np.arange(0,len(V),1)
+        Pos = np.arange(0,len(self.V),1)
         if show:
-            self.plottraces(V,yb,ye,Pos)
-        for i in range(0,len(V)):
-            V[i].write(clave[i]+'.V.sac')
-            E[i].write(clave[i]+'.E.sac')
-            N[i].write(clave[i]+'.N.sac')
-            if Componentes_Rotadas:
-                R[i].write(clave[i]+'.R.sac')
-                T[i].write(clave[i]+'.T.sac')
-        os.chdir('../')
-
-    def get_fecha(self):
-    	fecha = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
-    	pass
+            self.plottraces(self.V,yb,ye,Pos)
+        self.write(CR=Componentes_Rotadas)
     
     def get_picks(self,stream,normalized = True):
         import numpy as np

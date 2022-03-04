@@ -31,7 +31,7 @@ def fit_pulses(V,show=False,N=4500):
         plottraces(V,yb,ye,Pos)
     return V
 
-def ReduceTime(self,Traces,N="mean"):
+def ReduceTime(Traces,N="mean"):
     import statistics as stat
     import numpy as np
     try:
@@ -68,7 +68,7 @@ def ReduceTime(self,Traces,N="mean"):
             while (len(Traces[i].data)>N):
                 Traces[i].data=np.delete(Traces[i].data,len(Traces[i].data)-1)
 
-def plottraces(self,traces,bT,eT,Postraces=[0]):
+def plottraces(traces,bT,eT,Postraces=[0]):
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(len(Postraces),sharex=True)
     j=0
@@ -87,7 +87,7 @@ def plottraces(self,traces,bT,eT,Postraces=[0]):
     plt.subplots_adjust(top=0.95, bottom=0.05,hspace=0)
     plt.show()
 
-def spectrograms_pulses(self,Stream,show=False,reshape=False):
+def spectrograms_pulses(Stream,show=False,reshape=False):
     import scipy as sc
     from tqdm import tqdm
     import matplotlib.pyplot as plt
@@ -115,7 +115,5 @@ def spectrograms_pulses(self,Stream,show=False,reshape=False):
             c = plt.pcolormesh(t,f, Sxx,shading='auto',cmap='seismic')
             plt.colorbar(c)
             plt.title(Stream[i].stats.station)
-            #plt.axvline(St[i].stats.sac.a,color='red')
-            #plt.axvline(St[i].stats.sac.t1,color='red')
             plt.show()
     return X
