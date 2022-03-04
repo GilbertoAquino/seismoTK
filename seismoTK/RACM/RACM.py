@@ -1,5 +1,6 @@
 from numpy import RAISE
 from .helpers.ASA2SAC_helpers import *
+from seismoTK.Detection.Detection import *
 
 class RACM:
     def __init__(self,name=None,root=None,EarthquakeDate=None):
@@ -558,25 +559,6 @@ class RACM:
                 N[i].write(str(clave[i])+'.'+'N.sac')
         os.chdir('../')
 
-    def plottraces(self,traces,bT,eT,Postraces=[0]):
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots(len(Postraces),sharex=True)
-        j=0
-        if (len(Postraces) > 1):
-            for i in Postraces:
-                ax[j].plot(traces[i].data)
-                ax[j].axvline(bT[i],color='red')
-                ax[j].axvline(eT[i],color='blue')
-                ax[j].set_ylabel(traces[i].stats.station)
-                j=j+1
-        else:
-            ax.plot(traces.data)
-            ax.axvline(bT,color='red')
-            ax.axvline(eT,color='blue')
-            ax.set_ylabel(traces.stats.station)
-        plt.subplots_adjust(top=0.95, bottom=0.05,hspace=0)
-        plt.show()
-
     def CheckAlinear(self):
         import matplotlib.pyplot as plt
         import numpy as np
@@ -662,7 +644,6 @@ class RACM:
         distOrden=[]
         velfreqOrden=[]
         l=len(V)
-        #print(l)
         if Componentes_Rotadas:
             for i in range(0,len(V)):
                 clave.append(V[i].stats.station)
@@ -851,77 +832,6 @@ class RACM:
                 array.append(i)
         return array
 
-    def ReduceTime(self,Traces,N="mean"):
-        import statistics as stat
-        import numpy as np
-        try:
-            from tqdm import tqdm
-            tqdmisinstalled=True
-        except:
-            print('Tqdm module not installed')
-            tqdmisinstalled=False
-        if N == 'mean':
-            duration=[]
-            for i in Traces:
-                duration.append(len(i.data))
-            N = int(stat.mean(duration))
-            duration=[]
-            print(N)
-        elif N == 'max':
-            duration=[]
-            for i in Traces:
-                duration.append(len(i.data))
-            N = int(max(duration))
-            duration=[]
-            print(N)
-        if tqdmisinstalled:
-            print("Reduciendo el tiempo de componente: ",)
-            for i in tqdm(range(0,len(Traces))):
-                while(len(Traces[i].data)<N):
-                    Traces[i].data=np.insert(Traces[i].data,len(Traces[i].data),0)
-                while (len(Traces[i].data)>N):
-                    Traces[i].data=np.delete(Traces[i].data,len(Traces[i].data)-1)
-        else:
-            for i in range(0,len(Traces)):
-                while(len(Traces[i].data)<N):
-                    Traces[i].data=np.insert(Traces[i].data,len(Traces[i].data),0)
-                while (len(Traces[i].data)>N):
-                    Traces[i].data=np.delete(Traces[i].data,len(Traces[i].data)-1)
-            #print("Estación: ",Traces[i].stats.station,'Ajustada con: ',Traces[i].stats.npts)
-    
-    def spectrograms_pulses(self,Stream,show=False,reshape=False):
-        import scipy as sc
-        from tqdm import tqdm
-        import matplotlib.pyplot as plt
-        X=[]
-        for i in tqdm(range(0,len(Stream))):
-            fs = Stream[i].stats.sampling_rate
-            nps = 5000
-            try:
-                f,t,Sxx = sc.signal.spectrogram(Stream[i].data,fs,nperseg=nps,noverlap=nps-99,nfft=8192*3)
-            except:
-                from scipy.signal import spectrogram
-                f,t,Sxx = spectrogram(Stream[i].data,fs,nperseg=nps,noverlap=nps-99,nfft=8192*3)
-            f=f[0:50]
-            Sxx = Sxx[0:50]
-            dum = []
-            for j in range(0,50):
-                dum.append(max(Sxx[j]))
-            Sxx = Sxx/max(dum)
-            if reshape:
-                X.append(Sxx.reshape(50*405))
-            else:
-                X.append(Sxx)
-            if show:
-                print(i,len(Sxx),len(Sxx[0]),len(f),len(t))
-                c = plt.pcolormesh(t,f, Sxx,shading='auto',cmap='seismic')
-                plt.colorbar(c)
-                plt.title(Stream[i].stats.station)
-                #plt.axvline(St[i].stats.sac.a,color='red')
-                #plt.axvline(St[i].stats.sac.t1,color='red')
-                plt.show()
-        return X
-
     def fit_pulses(self,show=False):
         from obspy import read
         from tensorflow import keras
@@ -1007,21 +917,14 @@ class RACM:
         return y
 
     def CheckTraces(self):
-        import os
-        from obspy import read
         rootsave='./'+str(self.name)+'/'
-        os.chdir(rootsave)
-        V=read('*.V.sac')
-        E=read('*.E.sac')
-        N=read('*.N.sac')
-        print('Componentes Verticales leidas: ',len(V))
-        print('Componentes Norte leidas: ',len(N))
-        print('Componentes Este leidas: ',len(E))
-        if len(V) == len(N) and len(V) == len(E):
+        print('Componentes Verticales leidas: ',len(self.V))
+        print('Componentes Norte leidas: ',len(self.N))
+        print('Componentes Este leidas: ',len(self.E))
+        if len(self.V) == len(self.N) and len(self.V) == len(self.E):
             print('TODO EN ORDEN')
         else:
             print('REVISAR TRAZAS')
-        os.chdir('../')
 
     def readcsv(self,name,delimit=' '):
         import csv

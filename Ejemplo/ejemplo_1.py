@@ -9,6 +9,7 @@ RC=RACM('Datos_SAC','Datos_ASA','2017-09-19')
 #Revisa que todos los datos tengan el mismo intervalo de muestreo.
 RC.CheckDelta()
 RC.V.plot()
+RC.CheckTraces()
 #Rota las componentes con un script de sac. (Solo ubuntu)
 """RC.Rotar_sac()
 #Delimita los pulsos superficiales a partir de un modelo de ML. Si no quieres utilizarlo, deberas limitar los pulsos picando en sac con a para el inicio y t1 para el final.
