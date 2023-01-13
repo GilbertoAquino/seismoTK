@@ -1,6 +1,7 @@
 from numpy import RAISE
 from .helpers.ASA2SAC_helpers import *
 from seismoTK.Detection.Detection import *
+from ..Detection.Detection import *
 
 class RACM:
     def __init__(self,name=None,root=None,EarthquakeDate=None):
@@ -563,6 +564,7 @@ class RACM:
                     N[i].data=np.delete(N[i].data,0)
                     maximoi = np.argmax(VF[i].data[rmenos:rmas])
             for i in range(0,len(V)):
+                print("Guardadon datos!")
                 V[i].write(str(clave[i])+'.'+'V.sac')
                 E[i].write(str(clave[i])+'.'+'E.sac')
                 N[i].write(str(clave[i])+'.'+'N.sac')
@@ -615,7 +617,7 @@ class RACM:
         plottraces(V,badT,beginTrigger,endTrigger)
         """
         Pos = np.arange(0,len(V),1)
-        self.plottraces(V,beginTrigger,endTrigger,Pos)
+        plottraces(V,beginTrigger,endTrigger,Pos)
         for i in range(0,len(V)):
             plt.plot(V[i],color='black')
         plt.show()
@@ -879,7 +881,7 @@ class RACM:
             j=j+1
         Pos = np.arange(0,len(self.V),1)
         if show:
-            self.plottraces(self.V,yb,ye,Pos)
+            plottraces(self.V,yb,ye,Pos)
         self.write(CR=Componentes_Rotadas)
     
     def get_picks(self,stream,normalized = True):

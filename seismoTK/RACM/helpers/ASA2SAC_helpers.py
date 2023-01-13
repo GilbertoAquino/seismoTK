@@ -37,7 +37,7 @@ def ASATOSAC(Datos,Orientacion,CLAVE,Delta,stla,stlo,evla,evlo,hora,min,seg,FECH
 
 def AsignacionDeOrientacion(O,DatosO):
     dum=1
-    if O[0:4]=='N00E' or O[0:4]=='N00W':
+    if O[0:4]=='N00E' or O[0:4]=='N00W' or O[0:3]=='HNN' or O[0:3]=='ENN':
         O='North'
         return O,DatosO
     elif O[0:4]=='S00E' or O[0:4]=='S00W':
@@ -45,7 +45,7 @@ def AsignacionDeOrientacion(O,DatosO):
         DatosO = DatosO*-1.0
         print(O,"mult*-1")
         return O,DatosO
-    elif O[0:4]=='N90E' or O[0:4]=='S90E':
+    elif O[0:4]=='N90E' or O[0:4]=='S90E' or O[0:3]=='HNE' or O[0:3]=='ENE':
         O='East'
         return O,DatosO
     elif O[0:4]=='N90W' or O[0:4]=='S90W' or O[0:4]=='S90O' or O[0:4]=='N90O':
@@ -53,7 +53,7 @@ def AsignacionDeOrientacion(O,DatosO):
         DatosO = DatosO*-1.0
         print(O,"mult*-1")
         return O,DatosO
-    elif O=='V' or O=='+V' or O=='+V;V' or O == 'V;+V' or O == '+V;+V' or O == 'V;V':
+    elif O=='V' or O=='+V' or O=='+V;V' or O == 'V;+V' or O == '+V;+V' or O == 'V;V' or O[0:3]=='HNZ' or O[0:3]=='ENZ':
         O='Vert'
         return O,DatosO
     else:
