@@ -5,6 +5,8 @@ from ..Detection.Detection import *
 
 class RACM:
     def __init__(self,name=None,root=None,EarthquakeDate=None):
+        import os
+        self.runRoot = os.getcwd()
         self.name=name
         self.root=root
         self.date=EarthquakeDate
@@ -17,6 +19,7 @@ class RACM:
             self.N = None
             self.T = None
             self.R = None
+            os.chdir(self.runRoot)
     
     def read(self):
         import os
@@ -53,13 +56,17 @@ class RACM:
         import os
         if (self.V != None and self.N != None and self.E != None):
             raise ValueError("Stream objects are not NULL (None)")
+        print("Dentro de asa2sac")
         name=self.name
         root=self.root
         rootsave='./'+str(name)+'/'
         FECHA=self.date
+        os.system("pwd")
         os.system("mkdir ./"+str(name))
         dirf='dirf *'
         cd='cd '+root
+        print(root)
+        os.system("pwd")
         os.chdir(root)
         os.system('rm ../Estacionesleidas.txt ../hpm.txt ../SDI.txt ../N.txt ../No.txt ../La.txt ../Lat.txt ../Lo.txt ../Lon.txt ../In.txt ../Insti.txt ../Ori.txt ../Inter.txt')
         os.system('rm ../Orientacion.txt ../Muestreo.txt')
@@ -570,29 +577,22 @@ class RACM:
                 N[i].write(str(clave[i])+'.'+'N.sac')
         os.chdir('../')
 
-    def CheckAlinear(self):
+    def CheckAlinear(self,pos=[]):
         import matplotlib.pyplot as plt
         import numpy as np
         import os
         from obspy import read
         import statistics
         name=self.name
-        os.chdir(name)
-        V=read('*.V.sac')
+        #os.chdir(name)
+        V=self.V.copy()
         V.filter("bandpass",corners=4, freqmin=0.0833, freqmax=0.125, zerophase=True)
         beginTrigger=[]
         endTrigger=[]
         s=False
         for i in range(0,len(V)):
-        	beginTrigger.append(int(V[i].stats.sac.a*100))
-        	endTrigger.append(int(V[i].stats.sac.t1*100))
-        """    if V[i].stats.station in [None]:
-                a = self.STALTA_for_10secods_pulse(V[i],show=True)
-            else:
-                a = self.STALTA_for_10secods_pulse(V[i],show=s)
-            beginTrigger.append(a[0])
-           endTrigger.append(a[1])
-        """
+            beginTrigger.append(int(V[i].stats.sac.a*100))
+            endTrigger.append(int(V[i].stats.sac.t1*100))
         bmean=statistics.mean(beginTrigger)
         bmode=statistics.mode(beginTrigger)
         bmedian=statistics.median(beginTrigger)
@@ -616,8 +616,9 @@ class RACM:
                 badT.append(i)
         plottraces(V,badT,beginTrigger,endTrigger)
         """
-        Pos = np.arange(0,len(V),1)
-        plottraces(V,beginTrigger,endTrigger,Pos)
+        if not pos:
+            pos = np.arange(0,len(V),1)
+        plottraces(V,beginTrigger,endTrigger,pos)
         for i in range(0,len(V)):
             plt.plot(V[i],color='black')
         plt.show()
@@ -873,7 +874,7 @@ class RACM:
         j=0
         for i in y_pred:
             if i[0] < 0:
-            	i[0] = 0
+                i[0] = 0
             yb.append(i[0]*self.__nlength)
             ye.append(i[1]*self.__nlength)
             self.V[j].stats.sac['a'] = i[0]*450
@@ -884,6 +885,12 @@ class RACM:
             plottraces(self.V,yb,ye,Pos)
         self.write(CR=Componentes_Rotadas)
     
+    def get_model_metrics(self):
+        from tensorflow import keras
+        from pathlib import Path
+        BASE_DIR = Path(__file__).resolve().parent.parent
+        model = keras.models.load_model(BASE_DIR / 'ANN_Model_pulses2.tf')
+
     def get_picks(self,stream,normalized = True):
         import numpy as np
         yb = []
@@ -908,6 +915,9 @@ class RACM:
             dum[i][1] = ye[i]
             y.append(dum[i])
         return y
+    
+    def length(self):
+        return self.__nlength
 
     def CheckTraces(self):
         rootsave='./'+str(self.name)+'/'
