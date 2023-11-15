@@ -2,3 +2,6 @@ data_tests
 __pycache__
 seismoTK/Pol/prog/polfre_s1.66el
 virtualenv/
+seismoTK/__pycache__/*
+seismoTK/Detection/__pycache__/*
+seismoTK/RACM/__pycache__/*

@@ -1,0 +1,1 @@
+from seismoTK.Detection.Detection import *

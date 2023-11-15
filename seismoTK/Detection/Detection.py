@@ -70,13 +70,15 @@ def ReduceTime(Traces,N="mean"):
 
 def plottraces(traces,bT,eT,Postraces=[0]):
     import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(len(Postraces),sharex=True)
+    import numpy as np
+    fig, ax = plt.subplots(len(Postraces),sharex=True,figsize=(8,12))
     j=0
+    t=np.arange(0,450,0.01)
     if (len(Postraces) > 1):
         for i in Postraces:
-            ax[j].plot(traces[i].data)
-            ax[j].axvline(bT[i],color='red')
-            ax[j].axvline(eT[i],color='blue')
+            ax[j].plot(t,traces[i].data,lw=1.2,color="black")
+            ax[j].axvline(bT[i]/100,color='red')
+            ax[j].axvline(eT[i]/100,color='blue')
             ax[j].set_ylabel(traces[i].stats.station)
             j=j+1
     else:
@@ -84,26 +86,56 @@ def plottraces(traces,bT,eT,Postraces=[0]):
         ax.axvline(bT,color='red')
         ax.axvline(eT,color='blue')
         ax.set_ylabel(traces.stats.station)
+    plt.xlabel("Tiempo [s]")
     plt.subplots_adjust(top=0.95, bottom=0.05,hspace=0)
     plt.show()
 
-def spectrograms_pulses(Stream,show=False,reshape=False):
+def spectrograms_pulses(Stream,show=False,reshape=False,maxlen=50):
     import scipy as sc
     from tqdm import tqdm
     import matplotlib.pyplot as plt
+    import obspy
+
     X=[]
-    for i in tqdm(range(0,len(Stream))):
-        fs = Stream[i].stats.sampling_rate
+    if (type(Stream) == type(obspy.Stream())):
+        for i in tqdm(range(0,len(Stream))):
+            fs = Stream[i].stats.sampling_rate
+            nps = 5000
+            try:
+                f,t,Sxx = sc.signal.spectrogram(Stream[i].data,fs,nperseg=nps,noverlap=nps-99,nfft=8192*3)
+            except:
+                from scipy.signal import spectrogram
+                f,t,Sxx = spectrogram(Stream[i].data,fs,nperseg=nps,noverlap=nps-99,nfft=8192*3)
+            f=f[0:50]
+            Sxx = Sxx[0:50]
+            dum = []
+            for j in range(0,50):
+                dum.append(max(Sxx[j]))
+            Sxx = Sxx/max(dum)
+            if reshape:
+                X.append(Sxx.reshape(50*405))
+            else:
+                X.append(Sxx)
+            if show:
+                #print(i,len(Sxx),len(Sxx[0]),len(f),len(t))
+                c = plt.pcolormesh(t,f, Sxx,shading='auto',cmap='seismic')
+                plt.colorbar(c)
+                plt.title(Stream[i].stats.station)
+                plt.show()
+        return X
+    elif (type(Stream) == type(obspy.Trace())):
+        fs = Stream.stats.sampling_rate
         nps = 5000
         try:
-            f,t,Sxx = sc.signal.spectrogram(Stream[i].data,fs,nperseg=nps,noverlap=nps-99,nfft=8192*3)
+            f,t,Sxx = sc.signal.spectrogram(Stream.data,fs,nperseg=nps,noverlap=nps-99,nfft=8192*3)
         except:
             from scipy.signal import spectrogram
-            f,t,Sxx = spectrogram(Stream[i].data,fs,nperseg=nps,noverlap=nps-99,nfft=8192*3)
-        f=f[0:50]
-        Sxx = Sxx[0:50]
+            f,t,Sxx = spectrogram(Stream.data,fs,nperseg=nps,noverlap=nps-99,nfft=8192*3)
+        print(len(f))
+        f=f[0:maxlen]
+        Sxx = Sxx[0:maxlen]
         dum = []
-        for j in range(0,50):
+        for j in range(0,maxlen):
             dum.append(max(Sxx[j]))
         Sxx = Sxx/max(dum)
         if reshape:
@@ -111,9 +143,9 @@ def spectrograms_pulses(Stream,show=False,reshape=False):
         else:
             X.append(Sxx)
         if show:
-            print(i,len(Sxx),len(Sxx[0]),len(f),len(t))
+            #print(i,len(Sxx),len(Sxx[0]),len(f),len(t))
             c = plt.pcolormesh(t,f, Sxx,shading='auto',cmap='seismic')
             plt.colorbar(c)
-            plt.title(Stream[i].stats.station)
+            plt.title(Stream.stats.station)
             plt.show()
-    return X
+        return Sxx,t,f

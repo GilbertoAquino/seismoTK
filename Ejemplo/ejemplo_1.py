@@ -1,4 +1,7 @@
 import sys
+import os
+import matplotlib.pyplot as plt
+import numpy as np
 sys.path.insert(1,"../")
 from seismoTK import RACM
 #Instanciamos a la clase RACM
