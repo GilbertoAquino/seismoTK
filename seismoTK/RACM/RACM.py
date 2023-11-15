@@ -1,7 +1,10 @@
-from numpy import RAISE
 from .helpers.ASA2SAC_helpers import *
 from seismoTK.Detection.Detection import *
 from ..Detection.Detection import *
+from tqdm import tqdm
+import numpy as np
+import os
+from obspy import read
 
 class RACM:
     def __init__(self,name=None,root=None,EarthquakeDate=None):
@@ -19,8 +22,6 @@ class RACM:
             self.R = None
     
     def read(self):
-        import os
-        from obspy import read
         rootsave='./'+str(self.name)+'/'
         os.chdir(rootsave)
         self.V=read('*.V.*')
@@ -35,7 +36,6 @@ class RACM:
         os.chdir("../")
 
     def write(self,CR=False):
-        import os
         rootsave='./'+str(self.name)+'/'
         os.chdir(rootsave)
         for i in range(0,len(self.V)):
@@ -48,242 +48,113 @@ class RACM:
         os.chdir("../")
 
     def ASA2SAC(self):
-        import csv
-        import numpy as np
-        import os
         if (self.V != None and self.N != None and self.E != None):
             raise ValueError("Stream objects are not NULL (None)")
         name=self.name
         root=self.root
         rootsave='./'+str(name)+'/'
         FECHA=self.date
-        os.system("mkdir ./"+str(name))
-        dirf='dirf *'
-        cd='cd '+root
-        os.chdir(root)
-        os.system('rm ../Estacionesleidas.txt ../hpm.txt ../SDI.txt ../N.txt ../No.txt ../La.txt ../Lat.txt ../Lo.txt ../Lon.txt ../In.txt ../Insti.txt ../Ori.txt ../Inter.txt')
-        os.system('rm ../Orientacion.txt ../Muestreo.txt')
-        os.system("rm ../"+str(name)+"Est.txt")
-        os.system("ls >> ../Estacionesleidas.txt")
-        #os.os.system("awk '{print $3}' filenr.lis > ../Estacionesleidas.txt")
-        Estaciones=[]
-        with open('../Estacionesleidas.txt') as cvsfile:
-            file=csv.reader(cvsfile,delimiter=' ')
-            for i in file:
-                Estaciones.append(i)
-        #---------------------------------------------------------------------------#
-        #---------------------------------------------------------------------------#
-        #------------Tiempo de inicio-------------------#
-        #---------------------------------------------------------------------------#
-        #---------------------------------------------------------------------------#
-        os.system('touch ../hpm.txt')
-        for i in range(0,len(Estaciones)-1):
-            a=str(Estaciones[i][0])
-            #print(a)
-            grep='grep "HORA DE LA PRIMER" '+str(a)+' >> ../hpm.txt'
-            os.system(grep)
-        os.system("awk '{print $8}' ../hpm.txt > ../SDI.txt")
-        HoraDeIn=[]
-        with open('../SDI.txt') as cvsfile:
-            file=csv.reader(cvsfile,delimiter=':')
-            for i in file:
-                HoraDeIn.append(i)
-        #segdein=[]
-        #mindein=[]
-        #for i in range(0,len(HoraDeIn)):
-        #   mindein.append(float(HoraDeIn[i][1]))
-        #   segdein.append(float(HoraDeIn[i][2]))
-        #---------------------------------------------------------------------------#
-        #---------------------------------------------------------------------------#
-        #-----Nombre-LATITUD-LONGITUD e Institución-----#
-        #---------------------------------------------------------------------------#
-        #---------------------------------------------------------------------------#
-        os.system('touch ../N.txt')
-        os.system('touch ../No.txt')
-        os.system('touch ../La.txt')
-        os.system('touch ../Lat.txt')
-        os.system('touch ../Lo.txt')
-        os.system('touch ../Lon.txt')
-        os.system('touch ../In.txt')
-        os.system('touch ../Insti.txt')
-        for i in range(0,len(Estaciones)):
-            a=str(Estaciones[i][0])
-            grep1='grep "COORDENADAS DE LA ESTACION" '+str(a)+' >> ../La.txt'
-            grep2="awk 'NR<30' "+str(a)+" | awk '/LONG/' >> ../Lo.txt"
-            grep3='grep "CLAVE DE LA ESTACION" '+str(a)+' >> ../N.txt'
-            grep4='grep "INSTITUCION RESPONSABLE" '+str(a)+' >> ../In.txt'
-            os.system(grep1)
-            os.system(grep2)
-            os.system(grep3)
-            os.system(grep4)
-        os.system("awk '{print $6}' ../La.txt > ../Lat.txt")
-        os.system("awk '{print $2}' ../Lo.txt > ../Lon.txt")
-        os.system("awk '{print $6}' ../N.txt > ../No.txt")
-        os.system("awk '{print $4}' ../In.txt > ../Insti.txt")
-        Latitud=[]
-        Longitud=[]
-        Clave=[]
-        Institucion=[]
-        with open('../Lat.txt') as cvsfile:
-            file=csv.reader(cvsfile,delimiter=' ')
-            for i in file:
-                Latitud.append(i)
-        with open('../Lon.txt') as cvsfile:
-            file=csv.reader(cvsfile,delimiter=' ')
-            for i in file:
-                Longitud.append(i)
-        with open('../No.txt') as cvsfile:
-            file=csv.reader(cvsfile,delimiter=' ')
-            for i in file:
-                Clave.append(i)
-        with open('../Insti.txt') as cvsfile:
-            file=csv.reader(cvsfile,delimiter=' ')
-            for i in file:
-                Institucion.append(i)
-        for i in range(0,len(Latitud)):
-            Latitud[i]=float(Latitud[i][0])
-            Longitud[i]=float(Longitud[i][0])
-            Clave[i]=str(Clave[i][0])
-            Institucion[i]=str(Institucion[i][0])
-            #print(Clave[i],Institucion[i])
-        with open(str(name)+'Est.txt', mode='w') as p:
-            p2 = csv.writer(p,delimiter=' ')
-            p2.writerow(['# Clave Institucion Latitud Longitud'])
-            for i in range(0,len(Latitud)):
-                p2.writerow([i+1,Clave[i],Institucion[i],Latitud[i], -Longitud[i]])
-        os.system("mv "+str(name)+"Est.txt ../")
-        #---------------------------------------------------------------------------#
-        #---------------------------------------------------------------------------#
-        #-------------------ORIENTACIÓN, DURACION Y MUESTREO------------------------#
-        #---------------------------------------------------------------------------#
-        #---------------------------------------------------------------------------#
-        os.system('touch ../Ori.txt')
-        os.system('touch ../Inter.txt')
-        for i in range(0,len(Estaciones)):
-            a=str(Estaciones[i][0])
-            grep1='grep "INTERVALO DE MUESTREO, C1" '+str(a)+' >> ../Inter.txt'
-            grep2='grep "ORIENTACION C1-C6" '+str(a)+' >> ../Ori.txt'
-            os.system(grep1)
-            os.system(grep2)
-        os.system("awk -F/ '{print $3}' ../Inter.txt >> ../Muestreo.txt")
-        os.system("awk -F/ '{print $2,$3,$4}' ../Ori.txt >> ../Orientacion.txt")
-        Intervalo=[]
-        Orientacion=[]
-        VelInt=[]
-        with open('../Muestreo.txt') as cvsfile:
-            file=csv.reader(cvsfile,delimiter=' ')
-            for i in file:
-                Intervalo.append(i)
-        with open('../Orientacion.txt') as cvsfile:
-            file=csv.reader(cvsfile,delimiter=' ')
-            for i in file:
-                Orientacion.append(i)
-        for i in range(0,len(Intervalo)):
-            Intervalo[i]=float(Intervalo[i][0])
-            VelInt.append(1.0/Intervalo[i])
-        #-----------------------------------------------------------------------------#
-        #-----------------------Caracteristicas del sismos-----------------------------#
-        #-----------------------------------------------------------------------------#
-        a=str(Estaciones[(len(Estaciones))//2][0])
-        grep1='grep "COORDENADAS DEL EPICENTRO" '+str(a)+' >> ../SISMOLA.txt'
-        grep2="awk 'NR>50' "+str(a)+" | awk '/LON/' >> ../SISMOLo.txt"
-        grep3='grep "HORA EPICENTRO" '+str(a)+' >> ../SISMOHORA.txt'
-        os.system(grep1)
-        os.system(grep2)
-        os.system(grep3)
-        os.system("awk -F: '{print $2,$3,$4}' ../SISMOHORA.txt >> ../SISMO.txt")
-        os.system("awk '{print $5}' ../SISMOLA.txt >> ../SISMO.txt")
-        os.system("awk '{print $2}' ../SISMOLo.txt >> ../SISMO.txt")
-        sismo=[]
-        with open('../SISMO.txt') as cvsfile:
-            file=csv.reader(cvsfile,delimiter=' ')
-            for i in file:
-                sismo.append(i)
-        horasis=float(sismo[0][1])
-        minsis=float(sismo[0][2])
-        segsis=float(sismo[0][3][0:1])
-        latsis=float(sismo[1][0])
-        lonsis=float(sismo[2][0])
-        os.system("rm ../SISMOLA.txt ../SISMOLo.txt ../SISMOHORA.txt ../SISMO.txt")
-        #-----------------------------------------------------------------------------#
-        #-----------------------------------------------------------------------------#
-        #-----------------------------------------------------------------------------#
-        for i in range(0,len(Estaciones)):
-            print("---------------------------------------------------------")
-            print('Estación: ',Clave[i])
-            a=str(Estaciones[i][0])
-            datos=[]
-            os.system("awk 'NR>109{print $0}' "+str(a)+" > ../"+str(a)+".dat")
+        os.mkdir(str(name))
+        Estaciones = os.listdir(root)
+        print("Converting ASA files to SAC:")
+        for estacion in tqdm(Estaciones):
             aa=[]
-            j=0
-            lec=0
-            with open('../'+str(a)+'.dat') as cvsfile:
-                file=csv.reader(cvsfile,delimiter='	')
-                while lec==0:
-                    try:
-                        for x1 in file:
-                            aa.append(x1)
-                        lec=1
-                    except:
-                        next(cvsfile, None)
-                        j=j+1
-            print(len(aa))
-            if aa[len(aa)-1]==[]:
-                aa.pop(len(aa)-1)
-            comp1=np.zeros(len(aa))
-            comp2=np.zeros(len(aa))
-            comp3=np.zeros(len(aa))
-            #if Clave[i] == 'CYK2':
-            #    aa.pop(0)
-            #    aa = aa[0:46800]
-            #if Clave[i] == 'UKK2':
-            #    aa.pop(0)
-            #    aa = aa[0:37200]
-            lengthoffile=len(aa)
-            print(lengthoffile)
-            #if Clave[i] == 'CUP5':
-            #       lengthoffile = 30099-109
-            for jj in range(0,lengthoffile):
-                b=aa[jj][0]
-                comp=np.zeros(3)
-                example_list = [k for k in b.split(' ')]
-                ii=0
-                for x1 in range(0,len(example_list)):
-                    if example_list[x1]=='':
-                        pass
-                    else:
-                        try:
-                            comp[ii]=example_list[x1]
-                            ii=ii+1
-                        except:
-                            if example_list[x1][0]=='-':
-                                do=example_list[x1][1:]
-                                example_list2 = [k for k in do.split('-')]
-                                comp[ii]=float(example_list2[0])*-1.0
-                                comp[ii+1]=float(example_list2[1])*-1.0
-                            else:
-                                do=example_list[x1]
-                                example_list2 = [k for k in do.split('-')]
-                                comp[ii]=float(example_list2[0])
-                                comp[ii+1]=float(example_list2[1])*-1.0
-                comp1[jj]=comp[0]
-                comp2[jj]=comp[1]
-                comp3[jj]=comp[2]
-            O1=Orientacion[i][0]
-            O2=Orientacion[i][1]
-            O3=Orientacion[i][2]
-            O1,comp1=AsignacionDeOrientacion(O1,comp1)
-            O2,comp2=AsignacionDeOrientacion(O2,comp2)
-            O3,comp3=AsignacionDeOrientacion(O3,comp3)
-            print(i+1,"Orientación de las componentes: ",O1,O2,O3)
-            ASATOSAC(comp1,O1,Clave[i],Intervalo[i],Latitud[i],-Longitud[i],latsis,-lonsis,horasis,minsis,segsis,FECHA,rootsave)
-            ASATOSAC(comp2,O2,Clave[i],Intervalo[i],Latitud[i],-Longitud[i],latsis,-lonsis,horasis,minsis,segsis,FECHA,rootsave)
-            ASATOSAC(comp3,O3,Clave[i],Intervalo[i],Latitud[i],-Longitud[i],latsis,-lonsis,horasis,minsis,segsis,FECHA,rootsave)
-            os.system("rm ../"+str(a)+".dat")
-        os.system('rm ../Estacionesleidas.txt ../hpm.txt ../SDI.txt ../N.txt ../No.txt ../La.txt ../Lat.txt ../Lo.txt ../Lon.txt ../In.txt ../Insti.txt ../Ori.txt ../Inter.txt')
-        os.system('rm ../Orientacion.txt ../Muestreo.txt')
-        os.chdir('../')
+            next_line_longitud = False
+            next_line_longitud_sis = False
+            start_data = False
+            count = 0
+            with open(os.path.join(root,estacion)) as est:
+                for line in est.readlines():
+                    if next_line_longitud:
+                        Longitud = float(line.strip().split(":")[1].strip().split()[0])
+                        next_line_longitud = False
+                        continue
+                    if next_line_longitud_sis:
+                        lonsis = float(line.strip().split(":")[1].strip().split()[0])
+                        next_line_longitud_sis = False
+                        continue
+                    if "HORA DE LA PRIMERA MUESTRA" in line:
+                        HoraDeIn = line.strip().split(" : ")[1].strip()
+                        horasis = float(HoraDeIn.split(":")[0])
+                        minsis = float(HoraDeIn.split(":")[1])
+                        segsis = float(HoraDeIn.split(":")[2])
+                        continue
+                    if "COORDENADAS DE LA ESTACION" in line:
+                        Latitud = float(line.strip().split(" : ")[1].strip().split()[0])
+                        next_line_longitud = True
+                        continue
+                    if "CLAVE DE LA ESTACION" in line:
+                        Clave = line.strip().split(" : ")[1].strip()
+                        continue
+                    if "INSTITUCION RESPONSABLE" in line:
+                        Institucion = line.strip().split(" : ")[1].strip()
+                        continue
+                    if "ORIENTACION C1-C6" in line:
+                        Orientacion = [int for int in line.strip().split(" : ")[1].strip().split("/") if int != '']
+                        continue
+                    if "INTERVALO DE MUESTREO, C1" in line:
+                        Intervalo = float([int for int in line.strip().split(" : ")[1].strip().split("/") if int != ''][0])
+                        continue
+                    if "COORDENADAS DEL EPICENTRO" in line:
+                        latsis = float(line.strip().split(" : ")[1].strip().split()[0])
+                        next_line_longitud_sis = True
+                        continue
+                    #if "HORA EPICENTRO" in line:
+                    #    HoraSis = line.strip().split(" : ")[1].strip()
+                    #    horasis = float(HoraSis.split(":")[0])
+                    #    minsis = float(HoraSis.split(":")[1])
+                    #    segsis = float(HoraSis.split(":")[2])
+                    #    continue
+                    if "---------+---------+---------+" in line:
+                        start_data = True
+                        count += 1
+                        continue
+                    if start_data:
+                        if count == 2:
+                            #print([data for data in line.strip().split(" ") if data != ""])
+                            aa.append([data for data in line.strip().split(" ") if data != ""])
+                if aa[len(aa)-1]==[]:
+                    aa.pop(len(aa)-1)
+                comp1=np.zeros(len(aa))
+                comp2=np.zeros(len(aa))
+                comp3=np.zeros(len(aa))
+                lengthoffile=len(aa)
+                for jj in range(0,lengthoffile):
+                    comp=np.zeros(3)
+                    example_list = aa[jj]
+                    ii=0
+                    for x1 in range(0,len(example_list)):
+                        if example_list[x1]=='':
+                            pass
+                        else:
+                            try:
+                                comp[ii]=example_list[x1]
+                                ii=ii+1
+                            except:
+                                if example_list[x1][0]=='-':
+                                    do=example_list[x1][1:]
+                                    example_list2 = [k for k in do.split('-')]
+                                    comp[ii]=float(example_list2[0])*-1.0
+                                    comp[ii+1]=float(example_list2[1])*-1.0
+                                else:
+                                    do=example_list[x1]
+                                    example_list2 = [k for k in do.split('-')]
+                                    comp[ii]=float(example_list2[0])
+                                    comp[ii+1]=float(example_list2[1])*-1.0
+                    comp1[jj]=comp[0]
+                    comp2[jj]=comp[1]
+                    comp3[jj]=comp[2]
+                O1=Orientacion[0]
+                O2=Orientacion[1]
+                O3=Orientacion[2]
+                O1,comp1=AsignacionDeOrientacion(O1,comp1)
+                O2,comp2=AsignacionDeOrientacion(O2,comp2)
+                O3,comp3=AsignacionDeOrientacion(O3,comp3)
+                ASATOSAC(comp1,O1,Clave,Intervalo,Latitud,-Longitud,latsis,-lonsis,horasis,minsis,segsis,FECHA,rootsave)
+                ASATOSAC(comp3,O3,Clave,Intervalo,Latitud,-Longitud,latsis,-lonsis,horasis,minsis,segsis,FECHA,rootsave)
+                ASATOSAC(comp2,O2,Clave,Intervalo,Latitud,-Longitud,latsis,-lonsis,horasis,minsis,segsis,FECHA,rootsave)
         self.read()
+        
 
     def CheckDelta(self):
         import os
@@ -375,11 +246,6 @@ class RACM:
             return a[0]
 
     def Alinear(self,stationname=[None]):
-        import matplotlib.pyplot as plt
-        import numpy as np
-        import os
-        from obspy import read
-        import statistics as stcs
         name=self.name
         root=self.root
         rootsave='./'+str(name)+'/'
@@ -413,10 +279,10 @@ class RACM:
             #plt.plot(VF[i].data)
             if len(stationname) == 1:
                 if V[i].stats.station == stationname[0]:
-                    j=i;
+                    j=i
             else:
                 if V[i].stats.station in stationname:
-                    j=i;
+                    j=i
         if j==None:
             mindist=min(dist)
             mindistindex=dist.index(min(dist))
@@ -425,6 +291,8 @@ class RACM:
         else:
             mindist=dist[j]
             mindistindex=j
+        time_min = V[mindistindex].stats.starttime
+        time_max = V[mindistindex].stats.endtime
         #plt.show()
         pulse = [int(VF[mindistindex].stats.sac.a*100),int(VF[mindistindex].stats.sac.t1*100)]
         pulsemenos = pulse[0]
@@ -442,7 +310,7 @@ class RACM:
             #else:
                 #data2correlatemenos.append(int(pp[0])-500)
             #    data2correlatemas.append(int(pp[1])+250)
-        d2menos = int(min(data2correlatemenos))
+        d2menos =  0 #int(min(data2correlatemenos))
         #data2correlatemas=28000
         #print(data2correlatemenos,data2correlatemas)
         cor=np.correlate(VF[mindistindex].data[d2menos:data2correlatemas[mindistindex]],VF[mindistindex].data[pulsemenos:pulsemas],mode='full')
@@ -451,6 +319,7 @@ class RACM:
         maxargument=np.argmax(cor)
 
         print('Minima distancia: ',mindist,'Estación: ',clave[mindistindex])
+        times = []
         if Componentes_Rotadas:
             for i in range(0,len(VF)):
                 #a=np.correlate(VF[i].data[data2correlatemenos:data2correlatemas],VF[mindistindex].data[pulsemenos:pulsemas],mode='full')
@@ -484,6 +353,7 @@ class RACM:
                     mindex1=np.argmax(a)
         else:
             for i in range(0,len(VF)):
+                time = time_min
                 #a=np.correlate(VF[i].data[data2correlatemenos:data2correlatemas],VF[mindistindex].data[pulsemenos:pulsemas],mode='full')
                 a=np.correlate(VF[i].data[d2menos:data2correlatemas[i]],VF[mindistindex].data[pulsemenos:pulsemas],mode='full')
                 if np.abs(max(a)) < np.abs(min(a)):
@@ -501,6 +371,7 @@ class RACM:
                     E[i].data=np.insert(E[i].data,0,0)
                     N[i].data=np.insert(N[i].data,0,0)
                     mindex1=np.argmax(a)
+                    #time += 0.01
 
                 while mindex1 > maxargument:
                     a=np.delete(a,0)
@@ -509,6 +380,8 @@ class RACM:
                     E[i].data=np.delete(E[i].data,0)
                     N[i].data=np.delete(N[i].data,0)
                     mindex1=np.argmax(a)
+                    #time -= 0.01
+                times.append(time)
 
         rmenos = pulse[0] #int(input("-->Limite inferior de la fase a alinear: "))
         rmas = pulse[1] #input("-->Limite superior de la fase a alinear: "))
@@ -547,6 +420,7 @@ class RACM:
                 R[i].write(str(clave[i])+'.'+'R.sac')
         else:
             for i in range(0,len(V)):
+                time = times[i]
                 maximoi = np.argmax(VF[i].data[rmenos:rmas])
                 print(clave[i],maximoi,maximo)
                 if maximoi == 0:
@@ -557,17 +431,39 @@ class RACM:
                     E[i].data=np.insert(E[i].data,0,0)
                     N[i].data=np.insert(N[i].data,0,0)
                     maximoi = np.argmax(VF[i].data[rmenos:rmas])
+                    #time += 0.01
                 while maximoi > maximo:
                     VF[i].data=np.delete(VF[i].data,0)
                     V[i].data=np.delete(V[i].data,0)
                     E[i].data=np.delete(E[i].data,0)
                     N[i].data=np.delete(N[i].data,0)
                     maximoi = np.argmax(VF[i].data[rmenos:rmas])
+                    #time -= 0.01
+                times[i] = time
             for i in range(0,len(V)):
+                os.remove(str(clave[i])+'.V.sac')
+                os.remove(str(clave[i])+'.E.sac')
+                os.remove(str(clave[i])+'.N.sac')
+                V[i].stats.sac["nzhour"] = times[i].hour
+                V[i].stats.sac["nzmin"] = times[i].minute
+                V[i].stats.sac["nzsec"] = times[i].second
+                V[i].stats.sac["nzmsec"] = times[i].microsecond
+                N[i].stats.sac["nzhour"] = times[i].hour
+                N[i].stats.sac["nzmin"] = times[i].minute
+                N[i].stats.sac["nzsec"] = times[i].second
+                N[i].stats.sac["nzmsec"] = times[i].microsecond
+                E[i].stats.sac["nzhour"] = times[i].hour
+                E[i].stats.sac["nzmin"] = times[i].minute
+                E[i].stats.sac["nzsec"] = times[i].second
+                E[i].stats.sac["nzmsec"] = times[i].microsecond
+                V[i].stats.starttime = times[i]
+                E[i].stats.starttime = times[i]
+                N[i].stats.starttime = times[i]
                 print("Guardadon datos!")
-                V[i].write(str(clave[i])+'.'+'V.sac')
-                E[i].write(str(clave[i])+'.'+'E.sac')
-                N[i].write(str(clave[i])+'.'+'N.sac')
+                print(V[i].stats)
+                V[i].write(str(clave[i])+'.'+'V.2.sac', format='SAC')
+                E[i].write(str(clave[i])+'.'+'E.2.sac', format='SAC')
+                N[i].write(str(clave[i])+'.'+'N.2.sac', format='SAC')
         os.chdir('../')
 
     def CheckAlinear(self):
